@@ -253,7 +253,6 @@ fn build_full_cpu(
         grid_to_screen_mapper
             .screen_to_nearest_grid_pos( pos(screen_size.x / 3, 0)  );
 
-
     let talu_bank_grid_defns = cpu.talu_bank.calculate_defns(
         talu_bank_top_left,
         &talu_bank_drawing_data,
@@ -287,6 +286,7 @@ fn build_full_cpu(
         talu_bank: talu_bank_drawing_data,
         instruction_memory: instruction_mem_drawing_defns,
     };
+
     let all_blocked_points = {
         let mut blocked = talu_bank_grid_defns.blocked_points.clone();
         blocked.add_from(register_bank_calculated_defns.blocked_points());
@@ -295,10 +295,11 @@ fn build_full_cpu(
     };
 
     let cpu_grid_defns = CpuGridDefns{
-        talu_bank            : talu_bank_grid_defns,
+        talu_bank           : talu_bank_grid_defns,
         register_bank       : register_bank_calculated_defns,
         instruction_memory  : instruction_mem_calculated_defns,
-        blocked_points: all_blocked_points
+        blocked_points      : all_blocked_points,
+        controller          : todo!(),
     };
 
     FullCpu {
@@ -314,6 +315,7 @@ pub fn calculate_paths(
     grid_limits     : &GridLimits
 ) -> Vec<Path>{
     todo!();
+
     // cpu.execute()
     // for a in cpu.
     //     cpu.        

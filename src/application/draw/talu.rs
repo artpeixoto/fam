@@ -131,8 +131,8 @@ impl DrawableComponent for TaluCore {
 
                 for port_name in TaluPortName::all_port_names() {
 
-                    let port_info = talu_ports_info.get(&port_name);
-                    let port_grid_info = talu_ports_grid_info.get(&port_name);
+                    let port_info = talu_ports_info.get_for_port(&port_name);
+                    let port_grid_info = talu_ports_grid_info.get_for_port(&port_name);
 
                     draw_port(
 
@@ -256,8 +256,8 @@ impl DrawableComponent for TaluCore {
 
         { // draw ports
             for port_name in TaluPortName::all_port_names() {
-                let port_data = calculated_defns.ports_data.get(&port_name);
-                let port_grid_data  = calculated_defns.ports_grid_data.get(&port_name);
+                let port_data = calculated_defns.ports_data.get_for_port(&port_name);
+                let port_grid_data  = calculated_defns.ports_grid_data.get_for_port(&port_name);
 
                 draw_port(
                    port_data,

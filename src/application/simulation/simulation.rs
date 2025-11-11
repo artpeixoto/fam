@@ -142,7 +142,6 @@ impl Cpu {
 
             write_pc_req.satisfy(&mut self.register_bank);
         }
-
         true
     }
 }

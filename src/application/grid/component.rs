@@ -100,12 +100,12 @@ where
 }
 
 pub trait PortDataContainer< N: PortName, P, >{
-    fn get(&self, port_name: &N) -> &P;
+    fn get_for_port(&self, port_name: &N) -> &P;
 }
 
 
 impl<N: PortName, P> PortDataContainer<N, P> for FastHashMap<N, P>{
-    fn get(&self, port_name: &N) -> &P {
+    fn get_for_port(&self, port_name: &N) -> &P {
         &self[port_name]
     }
 }

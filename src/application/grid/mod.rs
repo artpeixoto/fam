@@ -11,5 +11,6 @@ pub mod component;
 pub mod connection;
 pub mod grid;
 pub mod cpu;
+pub mod controller;
 
 

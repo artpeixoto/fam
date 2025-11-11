@@ -12,8 +12,8 @@ impl BlockedPoints{
     pub fn new_from_blocked_inner_rect(rect: GridRect) -> Self{
         let mut res = BlockedPoints::new();
         res.block_rect(grid_rect(
-            rect.top_left + grid_dist(1,1),
-            rect.size - grid_size(2,2)
+                rect.top_left + grid_dist(1,1),
+                rect.size - grid_size(2,2)
         ));
         res
     }

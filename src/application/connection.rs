@@ -28,7 +28,7 @@ impl CpuConnection{
     
 impl TaluBankGridDefns{
     pub fn get_port_grid_data(&self, talu_addr: TaluAddress, port_name: TaluPortName) -> &PortGridDefns{
-        self.comp_grid_datas[talu_addr].ports_grid_data.get( &port_name )
+        self.comp_grid_datas[talu_addr].ports_grid_data.get_for_port( &port_name )
     }
 }
 

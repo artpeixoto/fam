@@ -71,7 +71,7 @@ pub struct TaluPortsDefns {
     pub setup_in: PortDefns,
 }
 impl PortDataContainer<TaluPortName, PortDefns> for TaluPortsDefns {
-    fn get(&self, port_name: &TaluPortName) -> &PortDefns {
+    fn get_for_port(&self, port_name: &TaluPortName) -> &PortDefns {
         match port_name {
             ActivationIn => &self.activation_input,
             DataIn0 => &self.data_input_0,

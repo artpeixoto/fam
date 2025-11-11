@@ -28,7 +28,7 @@ pub struct CpuRegister{
 }
 
 impl PortDataContainer<CpuRegisterPortName, PortDefns> for CpuRegisterPortsData{
-    fn get(&self, port_name: &CpuRegisterPortName) -> &PortDefns {
+    fn get_for_port(&self, port_name: &CpuRegisterPortName) -> &PortDefns {
         match port_name {
             CpuRegisterPortName::Input => &self.input,
             CpuRegisterPortName::Output => &self.output,

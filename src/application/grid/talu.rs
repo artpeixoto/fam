@@ -29,7 +29,7 @@ pub type TaluGridDefns =
     >;
 
 impl PortDataContainer<TaluPortName, PortGridDefns> for TaluPortsGridDefns {
-    fn get(&self, port_name: &TaluPortName) -> &PortGridDefns {
+    fn get_for_port(&self, port_name: &TaluPortName) -> &PortGridDefns {
         use TaluPortName::*;
         match port_name{
             DataIn0 => {&self.data_in_0}

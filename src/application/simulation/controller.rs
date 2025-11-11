@@ -1,3 +1,4 @@
+use crate::application::grid::component::PortName;
 use crate::application::simulation::talu::{TaluAddress, TaluOperation, TaluBank};
 use crate::application::simulation::cpu_registers::{CpuRegisterDataReader, CpuRegisterDataWriter};
 use crate::application::simulation::instruction::Instruction;
@@ -167,7 +168,31 @@ impl TaluConfigWriteRequest{
 pub enum ControllerPortName{
 	RegisterReader, 
 	RegisterWriter,
+	ProgramCounterReader,
+	ProgramCounterWriter,
 	TaluConfigWriter,
 	MainMemoryReader,
+}
+impl PortName for ControllerPortName{
+	fn all_port_names() -> Vec<Self> {
+		vec![
+			Self::RegisterReader,
+			Self::RegisterWriter,
+			Self::ProgramCounterReader,
+			Self::ProgramCounterWriter,
+			Self::TaluConfigWriter,
+			Self::MainMemoryReader,
+		]
+	}
 
+	fn small_name(&self) -> &str {
+		match self{
+			ControllerPortName::RegisterReader => "di",
+			ControllerPortName::RegisterWriter => "do",
+			ControllerPortName::ProgramCounterReader => "pci",
+			ControllerPortName::ProgramCounterWriter => "pco",
+			ControllerPortName::TaluConfigWriter => "ac",
+			ControllerPortName::MainMemoryReader => "mr",
+		}
+	}
 }
