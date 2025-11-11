@@ -9,18 +9,16 @@ use crate::application::simulation::component_bank::ComponentBank;
 use crate::application::simulation::cpu_registers::CpuRegisterBank;
 use crate::application::simulation::main_memory::MainMemory;
 
-pub type AluBank = ComponentBank<AluCore, ALU_COUNT>;
-pub type AluAddress = usize;
-pub const ALU_COUNT: usize = 32;
-
-impl AluBank {
+pub type TaluBank = ComponentBank<TaluCore, TALU_COUNT>;
+pub type TaluAddress = usize;
+pub const TALU_COUNT: usize = 32;
+impl TaluBank {
     pub fn new(
         main_memory: &mut MainMemory,
     ) -> Self{
-
         Self{
             components: Box::new(array::from_fn(|i|
-                AluCore::new(
+                TaluCore::new(
                     i,
                     main_memory,
                 )
@@ -28,6 +26,8 @@ impl AluBank {
         }
     }
 }
+
+
 
 
 

@@ -1,4 +1,5 @@
 use std::ops::Index;
+use getset::Getters;
 use itertools::Itertools;
 use crate::word::Word;
 use crate::application::draw::port::{PortDefns, PortSignalDirection, SignalType};
@@ -27,7 +28,7 @@ pub struct CpuRegister{
 }
 
 impl PortDataContainer<CpuRegisterPortName, PortDefns> for CpuRegisterPortsData{
-    fn get_for_port(&self, port_name: &CpuRegisterPortName) -> &PortDefns {
+    fn get(&self, port_name: &CpuRegisterPortName) -> &PortDefns {
         match port_name {
             CpuRegisterPortName::Input => &self.input,
             CpuRegisterPortName::Output => &self.output,
@@ -80,7 +81,7 @@ impl Index<CpuRegisterPortName> for CpuRegisterPortsData {
         }
     }
 }
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub enum CpuRegisterPortName{
     Input,
     Output,
@@ -154,7 +155,7 @@ impl CpuRegisterDataReader {
     pub fn get_read_request(&mut self) -> Option<CpuRegisterReadRequest> {
         if let Connected{ source:source, value} = self{
             Some(CpuRegisterReadRequest{
-                source: *source,
+                source_reg_addr: *source,
                 target: value,
             })
         } else {
@@ -202,7 +203,7 @@ impl CpuRegisterDataWriter{
         }
     }
     pub fn get_write_request(&self) -> Option<CpuRegisterWriteRequest>{
-        if let  CpuRegisterDataWriter::Connected {
+        if let CpuRegisterDataWriter::Connected {
                 target,
                 value: inner_value,
             } = self
@@ -221,18 +222,26 @@ pub struct CpuRegisterWriteRequest{
     target       : CpuRegisterAddress,
     value        : Word,
 }
+
 impl CpuRegisterWriteRequest {
     pub fn satisfy(&self, register_bank: &mut CpuRegisterBank) {
          register_bank.components[self.target].write(self.value);
     }
+    pub fn addr(&self) -> CpuRegisterAddress{
+        self.target
+    }
 }
+#[derive(Getters)]
 pub struct CpuRegisterReadRequest<'a>{
-    source : CpuRegisterAddress,
+    source_reg_addr : CpuRegisterAddress,
     target : &'a mut Option<Word>
 }
 impl CpuRegisterReadRequest<'_>{
-    pub fn satisfy(&mut self, register_bank: &CpuRegisterBank){
-        *self.target = Some( register_bank.components[self.source].value)
+    pub fn addr(&self) -> CpuRegisterAddress{
+        self.source_reg_addr
+    }
+    pub fn satisfy(&mut self, register_bank: &CpuRegisterBank)  {
+        *self.target = Some( register_bank.components[self.source_reg_addr].value)
     }
 }
 

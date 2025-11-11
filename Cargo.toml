@@ -1,5 +1,5 @@
 [package]
-name = "strucc"
+name = "fam"
 version = "0.1.0"
 edition = "2024"
 
@@ -9,6 +9,7 @@ derive_more = { version = "2.0.1", features = ["full"] }
 # bevy_tween = "0.8.0"
 # bevy_vector_shapes = "0.10.0"
 either = "1.15.0"
+getset = "0.1.6"
 itertools = "0.14.0"
 macroquad = "0.4.14"
 ordered_vec = "0.2.0"

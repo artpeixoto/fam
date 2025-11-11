@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use simulation::alu::AluBank;
+use simulation::talu::TaluBank;
 use crate::application::draw::text::draw_title;
 use draw::pos::Pos;
 use simulation::simulation::Cpu;
@@ -11,6 +11,7 @@ pub mod draw;
 pub mod prelude;
 pub mod direction;
 pub mod simulation;
+pub mod connection;
 
 // pub async fn run_simulation(program: Vec<Instruction>, data: Vec<Word>){
 //     let cpu = Cpu::new(program, data);
@@ -20,8 +21,8 @@ pub mod simulation;
 //     }
 // }
 
-// pub fn draw_alus(
-//     alus        : &Alus,
+// pub fn draw_talus(
+//     talus        : &Talus,
 //     mut top_left    : Pos,
 //     mut size        : Pos,
 // ) {
@@ -42,7 +43,7 @@ pub mod simulation;
 // 
 //     { // draw title
 //         let title_dims = draw_title(
-//             "Alus",
+//             "Talus",
 //             top_left,
 //             1,
 //             BLACK
@@ -51,7 +52,7 @@ pub mod simulation;
 //         size.y -= title_dims.height as i32;
 //     }
 // 
-//     { // draw alus
+//     { // draw talus
 // 
 //     }
 // 

@@ -1,5 +1,5 @@
 use crate::application::simulation::cpu_registers::CpuRegisterAddress;
-use crate::application::simulation::alu::AluOperation;
+use crate::application::simulation::talu::TaluOperation;
 use crate::word::Word;
 
 pub const CONTROLLER_INSTRUCTION_SIZE   		: usize = 64;
@@ -7,9 +7,9 @@ pub const CONTROLLER_INSTRUCTION_SIZE   		: usize = 64;
 
 #[derive( PartialEq, Copy, Clone, Debug,Eq, Default)]
 pub enum Instruction {
-    SetAluConfig{
-        alu_config	: AluOperation, 
-        alu_addr	: usize,
+    SetTaluConfig{
+        talu_config	: TaluOperation, 
+        talu_addr	: usize,
     },
     
     SetLiteral{

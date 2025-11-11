@@ -1,42 +1,42 @@
 use std::collections::HashMap;
 use macroquad::miniquad::window::set_window_size;
 use macroquad::prelude::*;
-use strucc::application::draw::alu::AluBankDrawingDefns;
-use strucc::application::draw::cpu::CpuDrawingDefns;
-use strucc::application::draw::cpu_register::CpuRegisterBankDrawingDefns;
-use strucc::application::draw::grid_to_screen::{draw_path_grid, GridToScreenMapper};
-use strucc::application::draw::instruction_memory;
-use strucc::application::draw::instruction_memory::{InstructionMemoryCurrentPosition, InstructionMemoryDrawingDefns};
-use strucc::application::draw::path::draw_path;
-use strucc::application::draw::port::{PortColorIndex, PortDrawingDefns, PortSignalDirection, SignalType};
-use strucc::application::draw::pos::{dist, pos, size, Size};
-use strucc::application::draw::shapes::draw_rectangle_pos;
-use strucc::application::grid::blocked_point::BlockedPoints;
-use strucc::application::grid::component::{ComponentGridData, DrawableComponent};
-use strucc::application::grid::cpu::{CpuComponentsGridDefns, CpuGridDefns};
-use strucc::application::grid::grid_limits::GridLimits;
-use strucc::application::grid::path::Path;
-use strucc::application::grid::pos::grid_pos;
-use strucc::application::simulation::alu::{AluBank, AluOperation, ALU_COUNT};
-use strucc::application::simulation::controller::Controller;
-use strucc::application::simulation::cpu_registers::{CpuRegisterBank, REGISTER_COUNT};
-use strucc::application::simulation::simulation::Cpu;
-use strucc::application::simulation::instruction::Instruction;
-use strucc::application::simulation::instruction_reader::InstructionMemory;
-use strucc::application::simulation::main_memory::MainMemory;
-use strucc::word::Word;
+use fam::application::draw::talu::TaluBankDrawingDefns;
+use fam::application::draw::cpu::CpuDrawingDefns;
+use fam::application::draw::cpu_register::CpuRegisterBankDrawingDefns;
+use fam::application::draw::grid_to_screen::{draw_path_grid, GridToScreenMapper};
+use fam::application::draw::instruction_memory;
+use fam::application::draw::instruction_memory::{InstructionMemoryCurrentPosition, InstructionMemoryDrawingDefns};
+use fam::application::draw::path::draw_path;
+use fam::application::draw::port::{PortColorIndex, PortDrawingDefns, PortSignalDirection, SignalType};
+use fam::application::draw::pos::{dist, pos, size, Size};
+use fam::application::draw::shapes::draw_rectangle_pos;
+use fam::application::grid::blocked_point::BlockedPoints;
+use fam::application::grid::component::{ComponentGridData, DrawableComponent};
+use fam::application::grid::cpu::{CpuGridDefns};
+use fam::application::grid::grid_limits::GridLimits;
+use fam::application::grid::path::Path;
+use fam::application::grid::pos::grid_pos;
+use fam::application::simulation::talu::{TaluBank, TaluOperation, TALU_COUNT};
+use fam::application::simulation::controller::Controller;
+use fam::application::simulation::cpu_registers::{CpuRegisterBank, REGISTER_COUNT};
+use fam::application::simulation::simulation::Cpu;
+use fam::application::simulation::instruction::Instruction;
+use fam::application::simulation::instruction_reader::InstructionMemory;
+use fam::application::simulation::main_memory::MainMemory;
+use fam::word::Word;
 
 // arch name: STruCC
 //  Spatially distributed and Structured Computation and Control
 
 fn main(){
-    macroquad::Window::new("STruCC Cpu Simulator", amain());
+    macroquad::Window::new("FAM Simulator", amain()); 
 }
 async fn amain() {
     let program = vec![
-        Instruction::SetAluConfig {
-            alu_addr    : 2,
-            alu_config  : AluOperation::Add {
+        Instruction::SetTaluConfig {
+            talu_addr    : 2,
+            talu_config  : TaluOperation::Add {
                 activation_input: 2 ,
                 data_input_1: 0,
                 data_input_0: 1,
@@ -52,14 +52,25 @@ async fn amain() {
 
     let screen_size = size(1600, 900);
 
-    let grid_lims = GridLimits::new(u16vec2(screen_size.x as u16 / 2 , screen_size.y as u16 / 2));
-
+    let grid_limits = GridLimits::new(u16vec2(screen_size.x as u16 / 2 , screen_size.y as u16 / 2));
+        
     let grid_to_screen_mapper = GridToScreenMapper::new(
-        &grid_lims,
+        &grid_limits,
         Rect::new(0_f32, 0_f32, screen_size.x as f32, screen_size.y as f32),
     );
 
+    let paths = Vec::new();
+
     let cpu = build_full_cpu(program, data, screen_size, &grid_to_screen_mapper);
+    
+    let app = Application{
+        cpu,
+        paths,
+        screen_size,
+        grid_to_screen_mapper,
+        grid_limits,
+    };
+
 
 
     // let instruction_memory_calculate_defns=
@@ -70,6 +81,8 @@ async fn amain() {
 
     loop{
         clear_background(WHITE);
+        app.draw();
+
         next_frame().await;
     }
 }
@@ -86,12 +99,20 @@ pub struct Application{
     pub grid_limits             : GridLimits,
 
 }
-fn draw(app: &Application){
-    draw_full_cpu(
-        &app.cpu,
-        &app.grid_to_screen_mapper
-    )
+impl Application{
+    pub fn draw(&self){
+        draw_full_cpu(
+            &self.cpu,
+            &self.grid_to_screen_mapper
+        );
+        draw_paths(
+            &self.paths, 
+            &self.grid_to_screen_mapper
+        );
+
+    }
 }
+
 fn draw_fps(){
     draw_rectangle_pos(pos(0,0), dist(200, 30), BLACK);
     macroquad::prelude::draw_fps();
@@ -148,11 +169,11 @@ fn draw_full_cpu(
         &cpu.drawing_defns.port,
         &grid_to_screen_mapper
     );
-    let alu_bank_drawing_state = Box::new([(); ALU_COUNT]);
-    cpu.sim.alu_bank.draw(
-        &alu_bank_drawing_state,
-        &cpu.grid_defns.alu_bank,
-        &cpu.drawing_defns.alu_bank,
+    let talu_bank_drawing_state = Box::new([(); TALU_COUNT]);
+    cpu.sim.talu_bank.draw(
+        &talu_bank_drawing_state,
+        &cpu.grid_defns.talu_bank,
+        &cpu.drawing_defns.talu_bank,
         &cpu.drawing_defns.port,
         &grid_to_screen_mapper
     );
@@ -171,7 +192,7 @@ fn build_full_cpu(
 
     let instruction_memory = InstructionMemory::new(program.clone());
 
-    let alus = AluBank::new(&mut  main_memory);
+    let talus = TaluBank::new(&mut  main_memory);
 
     let controller = Controller::new(
         &instruction_memory,
@@ -180,10 +201,11 @@ fn build_full_cpu(
     let cpu = {
         Cpu {
             main_memory,
-            alu_bank: alus,
+            talu_bank: talus,
             register_bank: registers,
             controller,
             instruction_memory,
+            connections: Default::default()
         }
     };
 
@@ -213,8 +235,8 @@ fn build_full_cpu(
     };
 
 
-    let alu_bank_drawing_data =
-        AluBankDrawingDefns {
+    let talu_bank_drawing_data =
+        TaluBankDrawingDefns {
             size: screen_size / 2,
             row_count: 4,
             inner_drawing_defns: Default::default(),
@@ -227,14 +249,14 @@ fn build_full_cpu(
         grid_to_screen_mapper
             .screen_to_nearest_grid_pos( pos(screen_size.x / 3,  screen_size.y / 2)  );
 
-    let alu_bank_top_left =
+    let talu_bank_top_left =
         grid_to_screen_mapper
             .screen_to_nearest_grid_pos( pos(screen_size.x / 3, 0)  );
 
 
-    let alu_bank_grid_defns = cpu.alu_bank.calculate_defns(
-        alu_bank_top_left,
-        &alu_bank_drawing_data,
+    let talu_bank_grid_defns = cpu.talu_bank.calculate_defns(
+        talu_bank_top_left,
+        &talu_bank_drawing_data,
         &port_drawing_data,
         &grid_to_screen_mapper
     );
@@ -262,24 +284,24 @@ fn build_full_cpu(
     let cpu_drawing_defns = CpuDrawingDefns{
         port: port_drawing_data,
         register_bank: register_bank_drawing_data,
-        alu_bank: alu_bank_drawing_data,
+        talu_bank: talu_bank_drawing_data,
         instruction_memory: instruction_mem_drawing_defns,
     };
     let all_blocked_points = {
-        let mut blocked = alu_bank_grid_defns.blocked_points.clone();
+        let mut blocked = talu_bank_grid_defns.blocked_points.clone();
         blocked.add_from(register_bank_calculated_defns.blocked_points());
         blocked.add_from(instruction_mem_calculated_defns.blocked_points());
         blocked
     };
 
     let cpu_grid_defns = CpuGridDefns{
-        alu_bank            : alu_bank_grid_defns,
+        talu_bank            : talu_bank_grid_defns,
         register_bank       : register_bank_calculated_defns,
         instruction_memory  : instruction_mem_calculated_defns,
         blocked_points: all_blocked_points
     };
 
-    FullCpu{
+    FullCpu {
         sim: cpu,
         grid_defns: cpu_grid_defns,
         drawing_defns: cpu_drawing_defns,
@@ -291,5 +313,9 @@ pub fn calculate_paths(
     cpu_grid_defns  : &CpuGridDefns,
     grid_limits     : &GridLimits
 ) -> Vec<Path>{
-         
+    todo!();
+    // cpu.execute()
+    // for a in cpu.
+    //     cpu.        
+    // } 
 }

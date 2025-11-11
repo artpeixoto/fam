@@ -1,4 +1,4 @@
-use crate::application::simulation::alu::ALU_COUNT;
+use crate::application::simulation::talu::{TALU_COUNT, TaluAddress};
 use crate::application::direction::Direction;
 use crate::application::direction::HorOrVer::Vertical;
 use crate::application::draw::component_bank::{ComponentBankDrawingDefn, ComponentBankGridData};
@@ -7,26 +7,27 @@ use crate::application::draw::port::{draw_port, PortDrawingDefns, PortGridDefns}
 use crate::application::draw::pos::{dist, pos, size, ScreenUnit, Size};
 use crate::application::draw::shapes::draw_rectangle_pos;
 use crate::application::draw::text::{draw_text_line_tiny, draw_title};
-use crate::application::grid::alu::AluPortsGridDefns;
+use crate::application::grid::talu::{TaluGridDefns, TaluPortsGridDefns};
 use crate::application::grid::blocked_point::BlockedPoints;
 use crate::application::grid::component::{DrawableComponent, PortDataContainer, PortName, SimpleComponentGridDefns};
 use crate::application::grid::pos::{grid_pos, GridPos};
 use crate::application::grid::rect::grid_rect;
-use crate::application::simulation::alu::{AluCore, AluOperation, AluPortName, AluPortsDefns};
+use crate::application::simulation::talu::{TaluCore, TaluOperation, TaluPortName, TaluPortsDefns};
 use crate::tools::used_in::UsedIn;
 use itertools::Itertools;
 use macroquad::color::{BLACK, LIGHTGRAY, WHITE};
 use std::marker::PhantomData;
+use std::ops::Index;
 
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct AluDrawingDefns {
+pub struct TaluDrawingDefns {
     pub full_size: Size,
     pub header_height: ScreenUnit,
 }
 
 
-impl Default for AluDrawingDefns {
+impl Default for TaluDrawingDefns {
     fn default() -> Self {
         Self {
             full_size: size(60, 60),
@@ -35,12 +36,12 @@ impl Default for AluDrawingDefns {
     }
 }
 
-impl DrawableComponent for AluCore {
+impl DrawableComponent for TaluCore {
     type DrawingState = ();
-    type DrawingDefn = AluDrawingDefns;
-    type PortName = AluPortName;
-    type PortDataContainer = AluPortsDefns;
-    type PortGridDataContainer = AluPortsGridDefns;
+    type DrawingDefn = TaluDrawingDefns;
+    type PortName = TaluPortName;
+    type PortDataContainer = TaluPortsDefns;
+    type PortGridDataContainer = TaluPortsGridDefns;
     type ComponentCalculatedDefns =
         SimpleComponentGridDefns<
             Self::PortName,
@@ -56,13 +57,13 @@ impl DrawableComponent for AluCore {
         grid_to_screen   : &GridToScreenMapper,
     ) -> Self::ComponentCalculatedDefns {
 
-        let alu_ports_info = self.get_ports_info();
+        let talu_ports_info = self.get_ports_info();
         let pos = grid_position;
-        let alu_grid_size = grid_to_screen.screen_to_grid_size(
+        let talu_grid_size = grid_to_screen.screen_to_grid_size(
             drawing_data.full_size,
         );
 
-        let alu_ports_grid_info =
+        let talu_ports_grid_info =
             {   // draw ports
                 let ports_start =
                     (pos
@@ -77,10 +78,11 @@ impl DrawableComponent for AluCore {
                     );
 
                 let top_y = ports_start.y;
-                let delta_y = ports_available_grid_size.y / 4;
+                let y_count = 5;
+                let delta_y = ports_available_grid_size.y / y_count;
 
                 let ys =
-                    (0..4_i16)
+                    (0..y_count as i16)
                         .into_iter()
                         .map(|i| top_y + (i * delta_y))
                         .collect_vec();
@@ -88,7 +90,7 @@ impl DrawableComponent for AluCore {
                 let left_x = ports_start.x;
                 let right_x = ports_start.x + ports_available_grid_size.x;
 
-                let alu_ports_grid_info = AluPortsGridDefns {
+                let talu_ports_grid_info = TaluPortsGridDefns {
                     // setup_in        : PortGridInfo {
                     //     position: grid_pos(left_x, ys[0] ),
                     //     direction: Direction::Left,
@@ -121,12 +123,16 @@ impl DrawableComponent for AluCore {
                         position: grid_pos(right_x, ys[3]),
                         direction: Direction::Right,
                     },
+                    setup_in: PortGridDefns {
+                        position: grid_pos(right_x, ys[4]),
+                        direction: Direction::Right,
+                    },
                 };
 
-                for port_name in AluPortName::all_port_names() {
+                for port_name in TaluPortName::all_port_names() {
 
-                    let port_info = alu_ports_info.get_for_port(&port_name);
-                    let port_grid_info = alu_ports_grid_info.get_for_port(&port_name);
+                    let port_info = talu_ports_info.get(&port_name);
+                    let port_grid_info = talu_ports_grid_info.get(&port_name);
 
                     draw_port(
 
@@ -137,16 +143,16 @@ impl DrawableComponent for AluCore {
                     );
                 }
 
-                alu_ports_grid_info
+                talu_ports_grid_info
             };
-        let alu_grid_rect = grid_rect(pos, alu_grid_size);
-        let blocked = BlockedPoints::new_from_blocked_inner_rect(alu_grid_rect.clone());
+        let talu_grid_rect = grid_rect(pos, talu_grid_size);
+        let blocked = BlockedPoints::new_from_blocked_inner_rect(talu_grid_rect.clone());
 
         SimpleComponentGridDefns {
-            grid_rect: alu_grid_rect,
+            grid_rect: talu_grid_rect,
             blocked_points: blocked,
-            ports_data: alu_ports_info,
-            ports_grid_data: alu_ports_grid_info,
+            ports_data: talu_ports_info,
+            ports_grid_data: talu_ports_grid_info,
             _phantom: PhantomData {},
         }
     }
@@ -159,7 +165,7 @@ impl DrawableComponent for AluCore {
             Self::PortDataContainer, 
             Self::PortGridDataContainer
         >,
-        alu_drawing_data    : &Self::DrawingDefn,
+        talu_drawing_data    : &Self::DrawingDefn,
         port_drawing_data   : &PortDrawingDefns,
         grid_to_screen      : &GridToScreenMapper,
     ) {
@@ -190,7 +196,7 @@ impl DrawableComponent for AluCore {
         }
 
         { // title
-            let mut cursor = cursor.split(alu_drawing_data.header_height, Vertical);
+            let mut cursor = cursor.split(talu_drawing_data.header_height, Vertical);
 
             draw_rectangle_pos(
                 cursor.top_left(),
@@ -208,7 +214,7 @@ impl DrawableComponent for AluCore {
             );
         }
 
-        let alu_op = self.operation;
+        let talu_op = self.operation;
 
         { // status text
             cursor.go(dist(2, 2));
@@ -221,26 +227,26 @@ impl DrawableComponent for AluCore {
                 .after_going(dist(-15, -5));
 
             let operation_text = {
-                match alu_op {
-                    AluOperation::NoOp => { "NOP" }
-                    AluOperation::Eq { .. } => { "==" }
-                    // AluOperation::Mov { .. } => {"MOV"}
-                    AluOperation::Latch { .. } => { "LAT" }
-                    AluOperation::Not { .. } => { "!" }
-                    AluOperation::And { .. } => { "&&" }
-                    AluOperation::Or { .. } => { "||" }
-                    AluOperation::Xor { .. } => { "^" }
-                    AluOperation::ShiftLeft { .. } => { "<<" }
-                    AluOperation::ShiftRight { .. } => { ">>" }
-                    AluOperation::SelectPart { .. } => { "SEL" }
-                    AluOperation::Add { .. } => { "+" }
-                    AluOperation::Sub { .. } => { "-" }
-                    AluOperation::Mul { .. } => { "*" }
-                    AluOperation::Div { .. } => { "/" }
-                    AluOperation::Rem { .. } => { "%" }
-                    AluOperation::Neg { .. } => { "NEG" }
-                    AluOperation::ReadFromMem { .. } => { "READ" }
-                    AluOperation::WriteToMem { .. } => { "WRIT" }
+                match talu_op {
+                    TaluOperation::NoOp => { "NOP" }
+                    TaluOperation::Eq { .. } => { "==" }
+                    // TaluOperation::Mov { .. } => {"MOV"}
+                    TaluOperation::Latch { .. } => { "LAT" }
+                    TaluOperation::Not { .. } => { "!" }
+                    TaluOperation::And { .. } => { "&&" }
+                    TaluOperation::Or { .. } => { "||" }
+                    TaluOperation::Xor { .. } => { "^" }
+                    TaluOperation::ShiftLeft { .. } => { "<<" }
+                    TaluOperation::ShiftRight { .. } => { ">>" }
+                    TaluOperation::SelectPart { .. } => { "SEL" }
+                    TaluOperation::Add { .. } => { "+" }
+                    TaluOperation::Sub { .. } => { "-" }
+                    TaluOperation::Mul { .. } => { "*" }
+                    TaluOperation::Div { .. } => { "/" }
+                    TaluOperation::Rem { .. } => { "%" }
+                    TaluOperation::Neg { .. } => { "NEG" }
+                    TaluOperation::ReadFromMem { .. } => { "READ" }
+                    TaluOperation::WriteToMem { .. } => { "WRIT" }
                 }
             };
 
@@ -249,9 +255,9 @@ impl DrawableComponent for AluCore {
         }
 
         { // draw ports
-            for port_name in AluPortName::all_port_names() {
-                let port_data = calculated_defns.ports_data.get_for_port(&port_name);
-                let port_grid_data  = calculated_defns.ports_grid_data.get_for_port(&port_name);
+            for port_name in TaluPortName::all_port_names() {
+                let port_data = calculated_defns.ports_data.get(&port_name);
+                let port_grid_data  = calculated_defns.ports_grid_data.get(&port_name);
 
                 draw_port(
                    port_data,
@@ -264,5 +270,6 @@ impl DrawableComponent for AluCore {
     }
 }
 
-pub type AluBankDrawingDefns = ComponentBankDrawingDefn<AluDrawingDefns>;
-pub type AluBankGridDefns = ComponentBankGridData<AluCore, { ALU_COUNT }>;
+pub type TaluBankDrawingDefns = ComponentBankDrawingDefn<TaluDrawingDefns>;
+pub type TaluBankGridDefns = ComponentBankGridData<TaluCore, { TALU_COUNT }>;
+

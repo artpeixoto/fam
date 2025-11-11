@@ -1,10 +1,10 @@
 use std::collections::HashMap;
-use super::AluOperation;
+use super::TaluOperation;
 use crate::application::draw::port::SignalType::Activation;
 use crate::application::draw::port::{PortDefns, PortSignalDirection, SignalType};
 use crate::application::grid::component::{PortDataContainer, PortName};
-use crate::application::simulation::alu::AluPortName::{
-    ActivationIn, ActivationOut, DataIn0, DataIn1, DataOut0, DataOut1,
+use crate::application::simulation::talu::TaluPortName::{
+    ActivationIn, ActivationOut, DataIn0, DataIn1, DataOut0, DataOut1, SetupIn
 };
 use crate::application::simulation::main_memory::{MainMemory, MainMemoryIo};
 use crate::application::simulation::memory_primitives::register::Register;
@@ -16,13 +16,13 @@ use SignalType::Data;
 use crate::application::simulation::cpu_registers::{CpuRegisterActReader, CpuRegisterActWriter, CpuRegisterDataReader, CpuRegisterDataWriter, CpuRegisterReadRequest, CpuRegisterWriteRequest};
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
-pub enum AluCoreState {
+pub enum TaluCoreState {
     Normal,
     Waiting,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
-pub enum AluPortName {
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
+pub enum TaluPortName {
     DataIn0,
     DataIn1,
     ActivationIn,
@@ -30,10 +30,10 @@ pub enum AluPortName {
     DataOut0,
     DataOut1,
     ActivationOut,
-    // SetupIn,
+    SetupIn,
 }
 
-impl PortName for AluPortName {
+impl PortName for TaluPortName {
     fn all_port_names() -> Vec<Self> {
         vec![
             DataIn0,
@@ -42,6 +42,7 @@ impl PortName for AluPortName {
             DataOut0,
             DataOut1,
             ActivationOut,
+            SetupIn,
         ]
     }
 
@@ -53,11 +54,12 @@ impl PortName for AluPortName {
             DataOut0 => "do0",
             DataOut1 => "do1",
             ActivationOut => "act_o",
+            SetupIn => "setup",
         }
     }
 }
 
-pub struct AluPortsDefns {
+pub struct TaluPortsDefns {
     // pub state_in            : PortInfo,
     pub data_input_0    : PortDefns,
     pub data_input_1    : PortDefns,
@@ -66,9 +68,10 @@ pub struct AluPortsDefns {
     pub data_output_0   : PortDefns,
     pub data_output_1   : PortDefns,
     pub activation_output: PortDefns,
+    pub setup_in: PortDefns,
 }
-impl PortDataContainer<AluPortName, PortDefns> for AluPortsDefns {
-    fn get_for_port(&self, port_name: &AluPortName) -> &PortDefns {
+impl PortDataContainer<TaluPortName, PortDefns> for TaluPortsDefns {
+    fn get(&self, port_name: &TaluPortName) -> &PortDefns {
         match port_name {
             ActivationIn => &self.activation_input,
             DataIn0 => &self.data_input_0,
@@ -76,14 +79,15 @@ impl PortDataContainer<AluPortName, PortDefns> for AluPortsDefns {
             DataOut0 => &self.data_output_0,
             DataOut1 => &self.data_output_1,
             ActivationOut => &self.activation_output,
+            SetupIn => &self.setup_in
         }
     }
 }
 
-pub struct AluCore {
+pub struct TaluCore {
     pub addr: usize,
-    pub operation       : AluOperation,
-    pub old_operation   : AluOperation,
+    pub operation       : TaluOperation,
+    pub old_operation   : TaluOperation,
     pub main_memory     : MainMemoryIo,
 
     pub inner_memory_0  : Word,
@@ -98,8 +102,14 @@ pub struct AluCore {
     pub activation_output: CpuRegisterActWriter,
 }
 
-impl AluCore {
-    pub fn collect_read_requests<'a>(&'a mut self) -> HashMap<AluPortName, CpuRegisterReadRequest<'a>> {
+
+// pub struct TaluConnectionRequests<'a>{
+//     pub read:  HashMap<TaluPortName, CpuRegisterReadRequest<'a>> ,
+//     pub write: HashMap<TaluPortName, >, 
+// }
+
+impl TaluCore {
+    pub fn collect_read_requests<'a>(&'a mut self) -> HashMap<TaluPortName, CpuRegisterReadRequest<'a>> {
         [
             (DataIn0, self.data_input_0.get_read_request()),
             (DataIn1, self.data_input_1.get_read_request()),
@@ -111,7 +121,7 @@ impl AluCore {
         )
         .collect()
     }
-    pub fn collect_write_requests(&mut self) -> HashMap<AluPortName, CpuRegisterWriteRequest> {
+    pub fn collect_write_requests(&mut self) -> HashMap<TaluPortName, CpuRegisterWriteRequest> {
         [
             (DataOut0, self.data_output_0.get_write_request()),
             (DataOut1, self.data_output_1.get_write_request()),
@@ -123,12 +133,12 @@ impl AluCore {
         )
         .collect()
     }
-    pub fn new(alu_addr: usize, main_memory: &MainMemory) -> Self {
-        AluCore {
-            addr                : alu_addr,
+    pub fn new(talu_addr: usize, main_memory: &MainMemory) -> Self {
+        TaluCore {
+            addr                : talu_addr,
             main_memory         : main_memory.get_io(),
-            operation           : AluOperation::NoOp,
-            old_operation       : AluOperation::NoOp,
+            operation           : TaluOperation::NoOp,
+            old_operation       : TaluOperation::NoOp,
 
             inner_memory_0      : Default::default(),
             inner_memory_1      : Default::default(),
@@ -142,9 +152,9 @@ impl AluCore {
             activation_output   : CpuRegisterActWriter::new(),
         }
     }
-    pub fn get_ports_info(&self) -> AluPortsDefns {
+    pub fn get_ports_info(&self) -> TaluPortsDefns {
         let ports_data = self.operation.get_ports_config();
-        AluPortsDefns {
+        TaluPortsDefns {
             data_input_0: PortDefns {
                 active: ports_data.data_input_0.is_some(),
                 signal_dir: Input,
@@ -175,11 +185,16 @@ impl AluCore {
                 signal_dir: Output,
                 signal_type: Activation,
             },
+            setup_in:  PortDefns{
+                active: true,
+                signal_dir: Input,
+                signal_type: SignalType::Setup 
+            }
         }
     }
 
 
-    pub fn set_new_operation(&mut self, new_operation: AluOperation){
+    pub fn set_new_operation(&mut self, new_operation: TaluOperation){
         self.old_operation = self.operation.clone();
         self.operation = new_operation.clone();
 
@@ -201,8 +216,8 @@ impl AluCore {
     pub fn execute(&mut self) {
         let op = self.operation;
         match &op {
-            AluOperation::NoOp => {}
-            AluOperation::Eq { .. } => {
+            TaluOperation::NoOp => {}
+            TaluOperation::Eq { .. } => {
                 if self.activation_input.read().unwrap() {
                     let in_0 = self.data_input_0.read().unwrap();
                     let in_1 = self.data_input_1.read().unwrap();
@@ -213,7 +228,7 @@ impl AluCore {
                     self.activation_output.write(false)
                 }
             }
-            // AluOperation::Mov {
+            // TaluOperation::Mov {
             //     activation_input,
             //     ..
             //     // address_input,
@@ -240,7 +255,7 @@ impl AluCore {
             //         );
             //     }
             // }
-            AluOperation::Not {
+            TaluOperation::Not {
                 activation_input,
                 data_input,
                 data_output,
@@ -254,7 +269,7 @@ impl AluCore {
                     self.activation_output.write(true);
                 }
             }
-            AluOperation::And {
+            TaluOperation::And {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
@@ -268,7 +283,7 @@ impl AluCore {
                     self.activation_output.write(true);
                 }
             }
-            AluOperation::Or {
+            TaluOperation::Or {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
@@ -282,7 +297,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::Xor {
+            TaluOperation::Xor {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
@@ -296,7 +311,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::ShiftLeft {
+            TaluOperation::ShiftLeft {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
@@ -311,7 +326,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::ShiftRight {
+            TaluOperation::ShiftRight {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
@@ -326,10 +341,10 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::SelectPart { .. } => {
+            TaluOperation::SelectPart { .. } => {
                 todo!()
             }
-            AluOperation::Add { ..
+            TaluOperation::Add { ..
             } => {
                 if self.activation_input.read().unwrap() {
                     let inp_0 = self.data_input_0.read().unwrap();
@@ -343,7 +358,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::Sub {
+            TaluOperation::Sub {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
@@ -359,7 +374,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::Mul {
+            TaluOperation::Mul {
                 second_word_output,
                 ..
             } => {
@@ -384,7 +399,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::Div {
+            TaluOperation::Div {
                 div_by_zero_flag_output,
                 ..
             } => {
@@ -410,7 +425,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::Rem {
+            TaluOperation::Rem {
                 div_by_zero_flag_output,
                 ..
             } => {
@@ -436,7 +451,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::Neg {
+            TaluOperation::Neg {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
@@ -448,7 +463,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::ReadFromMem {
+            TaluOperation::ReadFromMem {
                 ..
             } => {
                 if self.activation_input.read() .unwrap(){
@@ -461,7 +476,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::WriteToMem {
+            TaluOperation::WriteToMem {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
@@ -473,7 +488,7 @@ impl AluCore {
                     self.activation_output.write(false);
                 }
             }
-            AluOperation::Latch {
+            TaluOperation::Latch {
                 ..
             } => {
                 let hold_input = self.data_input_1.read().unwrap().to_bool();

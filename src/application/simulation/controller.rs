@@ -1,4 +1,4 @@
-use crate::application::simulation::alu::{AluAddress, AluOperation, AluBank};
+use crate::application::simulation::talu::{TaluAddress, TaluOperation, TaluBank};
 use crate::application::simulation::cpu_registers::{CpuRegisterDataReader, CpuRegisterDataWriter};
 use crate::application::simulation::instruction::Instruction;
 use crate::application::simulation::instruction_reader::IncrementCmd::{GoTo, Increment, NoIncrement};
@@ -15,7 +15,7 @@ pub struct Controller{
 	pub cpu_registers_reader	: CpuRegisterDataReader,
 	pub cpu_registers_writer	: CpuRegisterDataWriter,
 	
-	pub alu_config_writer		: AluConfigWriter	,
+	pub talu_config_writer		: TaluConfigWriter	,
 	pub state					: ControllerExecutionState,
 	pub instruction_reader  	: InstructionReader,
 	
@@ -30,20 +30,20 @@ impl Controller{
 			instruction_memory,
 		);
 			
-		let configurator = AluConfigWriter::Deactivated;
+		let configurator = TaluConfigWriter::Deactivated;
 			
 		Controller{
 			previous_instruction: None,
 			cpu_registers_reader: CpuRegisterDataReader::new(),
 			cpu_registers_writer: CpuRegisterDataWriter::new(),
-			alu_config_writer   : configurator,
+			talu_config_writer   : configurator,
 			instruction_reader,
 			state				: ControllerExecutionState::Running
 		}	
 	}
 
 	pub fn reset_outputs(&mut self){
-		self.alu_config_writer 	  = AluConfigWriter::Deactivated;
+		self.talu_config_writer 	  = TaluConfigWriter::Deactivated;
 		self.cpu_registers_writer = CpuRegisterDataWriter::Deactivated;
 	}
 
@@ -56,10 +56,10 @@ impl Controller{
 					false};
 
 				match current_instruction {
-					Instruction::SetAluConfig {  alu_config, alu_addr, } => {
-						self.alu_config_writer = AluConfigWriter::WritingToSingle{
-							target: alu_addr,
-							op: alu_config
+					Instruction::SetTaluConfig {  talu_config, talu_addr, } => {
+						self.talu_config_writer = TaluConfigWriter::WritingToSingle{
+							target: talu_addr,
+							op: talu_config
 						};
 
 						self.instruction_reader.set_increment_cmd(Increment);
@@ -78,8 +78,8 @@ impl Controller{
 						self.instruction_reader.set_increment_cmd(GoTo(addr));
 					}
 					Instruction::ResetAll => {
-						self.alu_config_writer = AluConfigWriter::WritingToAll {op:
-						AluOperation::NoOp};
+						self.talu_config_writer = TaluConfigWriter::WritingToAll {op:
+						TaluOperation::NoOp};
 						self.instruction_reader.set_increment_cmd(Increment);
 					}
 					Instruction::NoOp => {
@@ -103,32 +103,71 @@ impl Controller{
 	}
 }
 
-pub enum AluConfigWriter{
+pub enum TaluConfigWriter{
 	Deactivated,
 	WritingToSingle{
-		target	: AluAddress,
-		op		: AluOperation,
+		target	: TaluAddress,
+		op		: TaluOperation,
 	},
 	WritingToAll{
-		op		: AluOperation,
+		op		: TaluOperation,
 	}
 }
 
 
 
-impl AluConfigWriter{
-	pub fn configure_alus(&self, alu_bank: &mut AluBank){
+impl TaluConfigWriter{
+	pub fn get_config_write_request(&self) -> Option<TaluConfigWriteRequest>{
 		match &self{
-			AluConfigWriter::Deactivated => {}
-			AluConfigWriter::WritingToSingle { target, op } => {
-				alu_bank.components[*target].set_new_operation(op.clone());
+			TaluConfigWriter::Deactivated => {
+				None
 			}
-			AluConfigWriter::WritingToAll { op } => {
-				for alu in alu_bank.components.iter_mut() {
-					alu.set_new_operation(op.clone());
-				}
+			TaluConfigWriter::WritingToSingle { target, op } => {
+				Some(TaluConfigWriteRequest { 
+					address: Some(*target), 
+					operation: *op 
+				})
+				// talu_bank.components[*target].set_new_operation(op.clone());
+			}
+			TaluConfigWriter::WritingToAll { op } => {
+				Some(TaluConfigWriteRequest{
+					address: None,
+					operation: op.clone()
+				})
 			}
 		}
-
 	}
+}
+
+pub struct TaluConfigWriteRequest{
+	address: Option<TaluAddress>,
+	operation: TaluOperation, 
+}
+
+impl TaluConfigWriteRequest{
+	pub fn satisfy(self, talu_bank: &mut TaluBank){
+		if let Some(addr) = self.address{
+			talu_bank.components[addr].set_new_operation(self.operation);
+		} else{
+			for talu in talu_bank.components.iter_mut() {
+				talu.set_new_operation(self.operation.clone());
+			}
+		}
+	}
+	pub fn address(&self) -> &Option<TaluAddress>{
+		&self.address
+	}
+}
+
+
+
+
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone)]
+pub enum ControllerPortName{
+	RegisterReader, 
+	RegisterWriter,
+	TaluConfigWriter,
+	MainMemoryReader,
+
 }

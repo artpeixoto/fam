@@ -66,11 +66,10 @@ impl<CompPortName, Data, const  COMP_COUNT: usize>
 where
     CompPortName: PortName
 {
-    fn get_for_port(&self, port_name: &ComponentBankPortName<CompPortName, COMP_COUNT>) -> &Data {
+    fn get(&self, port_name: &ComponentBankPortName<CompPortName, COMP_COUNT>) -> &Data {
         self.elements.get(port_name).unwrap()
     }
 }
-
 
 pub struct ComponentBankGridData<
     InnerComp: DrawableComponent,
@@ -80,8 +79,7 @@ pub struct ComponentBankGridData<
     pub grid_rect       : GridRect,
     pub blocked_points  : BlockedPoints,
     pub ports_data      : ComponentBankPortDataContainer<InnerComp::PortName, PortDefns, COMP_COUNT>,
-    pub ports_grid_data : ComponentBankPortDataContainer<InnerComp::PortName, PortGridDefns,
-        COMP_COUNT>,
+    pub ports_grid_data : ComponentBankPortDataContainer<InnerComp::PortName, PortGridDefns, COMP_COUNT>,
     pub comp_grid_datas : Box<[InnerComp::ComponentCalculatedDefns; COMP_COUNT]>,
 }
 impl<InnerComp, const COMP_COUNT: usize>
@@ -194,11 +192,11 @@ where
                     };
                     port_data.insert(
                         cur_port_name.clone(),
-                        inner_comp_grid_data.ports_data().get_for_port(&inner_port_name).clone()
+                        inner_comp_grid_data.ports_data().get(&inner_port_name).clone()
                     );
                     port_grid_data.insert(
                         cur_port_name.clone(),
-                        inner_comp_grid_data.ports_grid_data().get_for_port(&inner_port_name).clone()
+                        inner_comp_grid_data.ports_grid_data().get(&inner_port_name).clone()
                     );
                 }
 

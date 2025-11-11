@@ -1,5 +1,5 @@
 pub mod text;
-pub mod alu;
+pub mod talu;
 pub mod port;
 pub mod shapes;
 pub mod path;

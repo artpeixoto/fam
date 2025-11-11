@@ -1,4 +1,4 @@
-pub mod alu;
+pub mod talu;
 pub mod cpu_registers;
 pub mod instruction;
 pub mod controller;

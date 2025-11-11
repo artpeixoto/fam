@@ -7,7 +7,7 @@ pub enum MovInput {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Copy)]
-pub enum AluOperation {
+pub enum TaluOperation {
     NoOp,
     Eq {
         activation_input    : CpuRegisterAddress,
@@ -139,7 +139,7 @@ pub enum AluOperation {
         activation_output : Option<CpuRegisterAddress>,
     },
 }
-pub struct AluPortsConfig {
+pub struct TaluPortsConfig {
     pub data_input_0    : Option<CpuRegisterAddress>,
     pub data_input_1    : Option<CpuRegisterAddress>,
     pub activation_input: Option<CpuRegisterAddress>,
@@ -147,10 +147,10 @@ pub struct AluPortsConfig {
     pub data_output_1    : Option<CpuRegisterAddress>,
     pub activation_output: Option<CpuRegisterAddress>,
 }
-impl AluOperation {
-    pub fn get_ports_config(&self) -> AluPortsConfig {
+impl TaluOperation {
+    pub fn get_ports_config(&self) -> TaluPortsConfig {
         match self.clone() {
-            AluOperation::NoOp => AluPortsConfig {
+            TaluOperation::NoOp => TaluPortsConfig {
                 data_input_0: None,
                 data_input_1: None,
                 activation_input: None,
@@ -159,13 +159,13 @@ impl AluOperation {
                 activation_output: None,
             },
 
-            AluOperation::Eq {
+            TaluOperation::Eq {
                 activation_input,
                 activation_output,
                 data_input_0,
                 data_input_1,
                 data_output: data_output_0,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -174,12 +174,12 @@ impl AluOperation {
                 activation_output,
             },
 
-            // AluOperation::Mov {
+            // TaluOperation::Mov {
             //     activation_input,
             //     activation_output,
             //     address_input,
             //     data_output: output,
-            // } => AluPortsConfig {
+            // } => TaluPortsConfig {
             //     data_input_0: Some(match address_input{
             //         MovInput::Source(src) => src,
             //         MovInput::SourceAddr(addr_src) => addr_src
@@ -191,9 +191,9 @@ impl AluOperation {
             //     activation_output: activation_output,
             // },
 
-            AluOperation::Latch {
+            TaluOperation::Latch {
                 activation_input, data_input, hold_input, data_output, activation_output
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input),
                 data_input_1: Some(hold_input),
                 activation_input: Some(activation_input),
@@ -201,12 +201,12 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output,
             },
-            AluOperation::Not {
+            TaluOperation::Not {
                 activation_input,
                 data_input: data_input_0,
                 data_output: data_output_0,
                 activation_output,
-            } => AluPortsConfig{
+            } => TaluPortsConfig{
                 data_input_0: Some(data_input_0),
                 data_input_1: None,
                 activation_input: Some(activation_input),
@@ -214,13 +214,13 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output:activation_output,
             },
-            AluOperation::And {
+            TaluOperation::And {
                 activation_input,
                 data_input_1,
                 data_input_0,
                 data_output_0,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -228,13 +228,13 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output: activation_output,
             },
-            AluOperation::Or {
+            TaluOperation::Or {
                 activation_input,
                 data_input_1,
                 data_input_0,
                 data_output_0,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1        : Some(data_input_1),
                 activation_input    : Some(activation_input),
@@ -242,13 +242,13 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output: activation_output,
             },
-            AluOperation::Xor {
+            TaluOperation::Xor {
                 activation_input,
                 data_input_1,
                 data_input_0,
                 data_output_0,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -256,13 +256,13 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output: activation_output,
             },
-            AluOperation::ShiftLeft {
+            TaluOperation::ShiftLeft {
                 activation_input,
                 value,
                 shift_count,
                 data_output_0,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(value),
                 data_input_1: Some(shift_count),
                 activation_input: Some(activation_input),
@@ -270,13 +270,13 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output: activation_output,
             },
-            AluOperation::ShiftRight {
+            TaluOperation::ShiftRight {
                 activation_input,
                 value,
                 shift_count,
                 data_output_0,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(value),
                 data_input_1: Some(shift_count),
                 activation_input: Some(activation_input),
@@ -284,13 +284,13 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output: activation_output,
             },
-            AluOperation::SelectPart {
+            TaluOperation::SelectPart {
                 activation_input,
                 data_input: data_input_1,
                 selection_input: data_input_0,
                 data_output_0,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -298,14 +298,14 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output: activation_output,
             },
-            AluOperation::Add {
+            TaluOperation::Add {
                 activation_input,
                 data_input_1,
                 data_input_0,
                 data_output_0,
                 flags_output,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -313,14 +313,14 @@ impl AluOperation {
                 data_output_1: flags_output,
                 activation_output: activation_output,
             },
-            AluOperation::Sub {
+            TaluOperation::Sub {
                 activation_input,
                 data_input_1,
                 data_input_0,
                 data_output_0,
                 flags_output,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -328,14 +328,14 @@ impl AluOperation {
                 data_output_1: flags_output,
                 activation_output: activation_output,
             },
-            AluOperation::Mul {
+            TaluOperation::Mul {
                 activation_input,
                 data_input_1,
                 data_input_0,
                 first_word_output: data_output_0,
                 second_word_output,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -343,14 +343,14 @@ impl AluOperation {
                 data_output_1: second_word_output,
                 activation_output: activation_output,
             },
-            AluOperation::Div {
+            TaluOperation::Div {
                 activation_input,
                 divisor: data_input_1,
                 dividend: data_input_0,
                 data_output_0,
                 div_by_zero_flag_output: div_by_zero_output,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -358,14 +358,14 @@ impl AluOperation {
                 data_output_1: div_by_zero_output,
                 activation_output: activation_output,
             },
-            AluOperation::Rem {
+            TaluOperation::Rem {
                 activation_input,
                 divisor: data_input_1,
                 dividend: data_input_0,
                 data_output_0,
                 div_by_zero_flag_output: div_by_zero_output,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: Some(data_input_1),
                 activation_input: Some(activation_input),
@@ -373,12 +373,12 @@ impl AluOperation {
                 data_output_1: div_by_zero_output,
                 activation_output: activation_output,
             },
-            AluOperation::Neg {
+            TaluOperation::Neg {
                 activation_input,
                 input: data_input_0,
                 data_output_0,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input_0),
                 data_input_1: None,
                 activation_input: Some(activation_input),
@@ -386,12 +386,12 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output: activation_output,
             },
-            AluOperation::ReadFromMem {
+            TaluOperation::ReadFromMem {
                 activation_input,
                 data_input_0: addr_input,
                 data_output_0,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(addr_input),
                 data_input_1: None,
                 activation_input: Some(activation_input),
@@ -399,12 +399,12 @@ impl AluOperation {
                 data_output_1: None,
                 activation_output: activation_output,
             },
-            AluOperation::WriteToMem {
+            TaluOperation::WriteToMem {
                 activation_input,
                 data_input,
                 address_input,
                 activation_output,
-            } => AluPortsConfig {
+            } => TaluPortsConfig {
                 data_input_0: Some(data_input),
                 data_input_1: Some(address_input),
                 activation_input: Some(activation_input),
