@@ -1,6 +1,6 @@
 use crate::application::simulation::talu::{TALU_COUNT, TaluAddress};
 use crate::application::direction::Direction;
-use crate::application::direction::HorOrVer::Vertical;
+use crate::application::direction::Axis::Vertical;
 use crate::application::draw::component_bank::{ComponentBankDrawingDefn, ComponentBankGridData};
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
 use crate::application::draw::port::{draw_port, PortDrawingDefns, PortGridDefns};

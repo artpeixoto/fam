@@ -13,7 +13,7 @@ use fam::application::draw::pos::{dist, pos, size, Size};
 use fam::application::draw::shapes::draw_rectangle_pos;
 use fam::application::grid::blocked_point::BlockedPoints;
 use fam::application::grid::component::{ComponentGridData, DrawableComponent};
-use fam::application::grid::cpu::{CpuGridDefns};
+use fam::application::grid::cpu::{CpuGridData};
 use fam::application::grid::grid_limits::GridLimits;
 use fam::application::grid::path::Path;
 use fam::application::grid::pos::grid_pos;
@@ -88,7 +88,7 @@ async fn amain() {
 }
 pub struct FullCpu{
     pub sim             : Cpu,
-    pub grid_defns      : CpuGridDefns,
+    pub grid_defns      : CpuGridData,
     pub drawing_defns   : CpuDrawingDefns
 }
 pub struct Application{
@@ -294,7 +294,7 @@ fn build_full_cpu(
         blocked
     };
 
-    let cpu_grid_defns = CpuGridDefns{
+    let cpu_grid_defns = CpuGridData{
         talu_bank           : talu_bank_grid_defns,
         register_bank       : register_bank_calculated_defns,
         instruction_memory  : instruction_mem_calculated_defns,
@@ -311,11 +311,13 @@ fn build_full_cpu(
 
 pub fn calculate_paths(
     cpu             : &Cpu,
-    cpu_grid_defns  : &CpuGridDefns,
+    cpu_grid_defns  : &CpuGridData,
     grid_limits     : &GridLimits
 ) -> Vec<Path>{
-    todo!();
-
+    for conn in cpu.connections.iter(){
+        let path = 
+        cpu_grid_defns.get_port_grid_data(endpoint)
+    }
     // cpu.execute()
     // for a in cpu.
     //     cpu.        

@@ -181,6 +181,7 @@ pub enum ControllerPortName{
 	TaluConfigWriter,
 	MainMemoryReader,
 }
+
 impl PortName for ControllerPortName{
 	fn all_port_names() -> Vec<Self> {
 		vec![
@@ -194,13 +195,13 @@ impl PortName for ControllerPortName{
 	}
 
 	fn small_name(&self) -> &str {
-		match self{
-			ControllerPortName::RegisterReader => "di",
-			ControllerPortName::RegisterWriter => "do",
-			ControllerPortName::ProgramCounterReader => "pci",
-			ControllerPortName::ProgramCounterWriter => "pco",
-			ControllerPortName::TaluConfigWriter => "ac",
-			ControllerPortName::MainMemoryReader => "mr",
+		match self {
+			Self::RegisterReader => "di",
+			Self::RegisterWriter => "do",
+			Self::ProgramCounterReader => "pci",
+			Self::ProgramCounterWriter => "pco",
+			Self::TaluConfigWriter => "ac",
+			Self::MainMemoryReader => "mmr",
 		}
 	}
 }

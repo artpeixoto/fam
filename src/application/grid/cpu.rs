@@ -1,4 +1,6 @@
-use crate::application::connection::CpuConnectionEndpoint;
+use wgpu::naga::{FastHashMap, FastHashSet};
+
+use crate::application::connection::{CpuConnection, CpuConnectionEndpoint};
 use crate::application::draw::port::PortGridDefns;
 use crate::application::draw::talu::TaluBankGridDefns;
 use crate::application::draw::cpu_register::CpuRegisterBankGridDefns;
@@ -7,19 +9,22 @@ use crate::application::grid::blocked_point::BlockedPoints;
 use crate::application::grid::component::PortDataContainer;
 use crate::application::grid::connection::{ConnectionEndpoint, ConnectionEndpointPair};
 use crate::application::grid::controller::ControllerGridDefns;
+use crate::application::grid::path::Path;
 use crate::application::simulation::controller::Controller;
 use crate::application::simulation::talu::TaluBank;
 use crate::application::simulation::cpu_registers::CpuRegisterBank;
 
-pub struct CpuGridDefns{
+pub struct CpuGridData{
     pub talu_bank            : TaluBankGridDefns,
     pub register_bank        : CpuRegisterBankGridDefns,
     pub controller           : ControllerGridDefns,
     pub instruction_memory   : InstructionMemoryGridDefns,
     pub blocked_points       : BlockedPoints,
+    pub paths                : FastHashMap<CpuConnection, Path> 
 }
-impl CpuGridDefns {
-    pub fn get_port_defns<'a>
+
+impl CpuGridData {
+    pub fn get_port_grid_data<'a>
         (&'a self, endpoint: &CpuConnectionEndpoint) -> &'a PortGridDefns
     {
         match endpoint{
@@ -35,6 +40,12 @@ impl CpuGridDefns {
             CpuConnectionEndpoint::MainMemory => {
                 todo!();
             },
+        }
+    }
+    pub fn calculate_paths(&mut self, connections: &FastHashSet<CpuConnection>){
+        self.paths.retain(|k, _v| connections.contains(k));
+        for new_conn in connections.iter().filter(|conn| !self.paths.contains_key(*conn)){
+            
         }
     }
 }

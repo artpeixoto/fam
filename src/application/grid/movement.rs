@@ -2,7 +2,7 @@ use std::ops::Add;
 use macroquad::math::u16vec2;
 use crate::application::direction::Direction;
 use crate::application::direction::Direction::{Down, Left, Up};
-use crate::application::direction::HorOrVer::{Horizontal, Vertical};
+use crate::application::direction::Axis::{Horizontal, Vertical};
 use crate::application::grid::line::GridLine;
 use crate::application::grid::pos::{grid_pos, GridPos};
 

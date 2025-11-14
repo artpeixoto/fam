@@ -1,5 +1,5 @@
 use macroquad::math::U16Vec2;
-use crate::application::direction::HorOrVer::{Horizontal, Vertical};
+use crate::application::direction::Axis::{Horizontal, Vertical};
 use crate::application::grid::line::GridLine;
 use crate::application::grid::pos::GridPos;
 

@@ -1,11 +1,12 @@
-use HorOrVer::{Horizontal, Vertical};
+use Axis::{Horizontal, Vertical};
 use macroquad::color::Color;
 use macroquad::math::IVec2;
 use macroquad::shapes::draw_rectangle;
-use crate::application::direction::{Direction, HorOrVer};
+use crate::application::direction::{Direction, Axis};
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
 use crate::application::draw::port::PortDrawingDefns;
 use crate::application::draw::shapes::{draw_line_pos, draw_rectangle_lines_pos};
+use crate::application::draw::text::{TextStyle, draw_text_pos};
 use crate::application::grid::line;
 use crate::application::grid::pos::{grid_dist, grid_size, GridPos, GridSize};
 use crate::application::draw::pos::{dist, pos, Dist, Pos, ScreenUnit, Size};
@@ -195,7 +196,7 @@ impl RectCursor{
     ///
     /// ```
     #[must_use]
-    pub fn split(&mut self, split_dist: ScreenUnit, dir: HorOrVer) -> Self{
+    pub fn split(&mut self, split_dist: ScreenUnit, dir: Axis) -> Self{
         let mut new = self.clone();
         self.go(match dir {
             Vertical   => pos( 0, split_dist),
@@ -214,6 +215,9 @@ impl RectCursor{
     }
     pub fn with_padding(&mut self, horizontal: i32, vertical: i32) -> Self{
         self.clone_apply_return(|this| this.pad(horizontal, vertical))
+    }
+    pub fn draw_text_line(&self, text: &str, text_style: TextStyle, scaling: u8, color: Color){
+        draw_text_pos(text, self.top_left(), text_style, scaling, color);
     }
 
     pub fn with_size(&mut self, size: Size) -> &mut Self{

@@ -1,4 +1,4 @@
-use crate::application::direction::HorOrVer;
+use crate::application::direction::Axis;
 use crate::application::draw::cursor::RectCursor;
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
 use crate::application::draw::port::{PortDefns, PortDrawingDefns, PortGridDefns};
@@ -102,7 +102,7 @@ impl DrawableComponent for InstructionMemory {
 
                 {
                     // draw address
-                    let mut cursor = cursor.split(font_dims.full_height() + 4, HorOrVer::Vertical);
+                    let mut cursor = cursor.split(font_dims.full_height() + 4, Axis::Vertical);
 
                     draw_rectangle_pos(cursor.top_left(), cursor.remaining_size(), DARKGRAY);
 

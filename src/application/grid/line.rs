@@ -1,12 +1,12 @@
 use macroquad::math::{I16Vec2, U16Vec2};
-use crate::application::direction::HorOrVer;
-use crate::application::direction::HorOrVer::{Horizontal, Vertical};
+use crate::application::direction::Axis;
+use crate::application::direction::Axis::{Horizontal, Vertical};
 use crate::application::grid::pos::{grid_pos, GridPos};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 pub struct GridLine {
     pub (in super) index    : GridPos,
-    pub hor_or_ver          : HorOrVer,
+    pub hor_or_ver          : Axis,
 }
 
 impl GridLine {

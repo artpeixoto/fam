@@ -1,15 +1,15 @@
 use std::marker::PhantomData;
 
 use itertools::Itertools;
-use macroquad::color::{BLACK, DARKBROWN};
+use macroquad::color::{BLACK, DARKBROWN, WHITE};
 use macroquad::math::ivec2;
 use macroquad::shapes::draw_rectangle;
 use wgpu::naga::FastHashMap;
-use crate::application::direction::{self, Direction};
+use crate::application::direction::{self, Direction, Axis};
 use crate::application::draw::cursor::RectCursor;
 use crate::application::grid::component::{ComponentGridData, DrawableComponent, PortDataContainer, PortName, SimpleComponentGridDefns};
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
-use crate::application::draw::port::{PortDefns, PortDrawingDefns, PortGridDefns, PortSignalDirection, SignalType};
+use crate::application::draw::port::{PortDefns, PortDrawingDefns, PortGridDefns, PortSignalDirection, SignalType, draw_port};
 use crate::application::draw::pos::Size;
 use crate::application::grid::blocked_point::BlockedPoints;
 use crate::application::grid::controller::{ControllerPortsData, ControllerPortsGridData};
@@ -17,6 +17,7 @@ use crate::application::grid::pos::{grid_pos, grid_size, GridPos};
 use crate::application::grid::rect::{grid_rect, GridRect};
 use crate::application::simulation::component_bank::ComponentBank;
 use crate::application::simulation::controller::{Controller, ControllerExecutionState, ControllerPortName};
+use crate::application::simulation::instruction::HorizontalDir;
 use crate::application::simulation::talu::TaluCoreState;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -175,14 +176,35 @@ impl DrawableComponent for Controller{
 	) {
 		let SimpleComponentGridDefns{
 			grid_rect,
+			ports_data,
+			ports_grid_data,
 			..
 		} = grid_defns;
 
 		// DARKBROWN
-		let cursor = grid_to_screen.get_cursor_for_region(grid_rect.top_left, grid_rect.size);
-		cursor.draw_rect_lines(BLACK, 1.);
-		let header_cursor = cursor.split(24, direction::HorOrVer::Horizontal)
+		let mut cursor = grid_to_screen.get_cursor_for_region(grid_rect.top_left, grid_rect.size);
 
+        { // draw ports
+            for port_name in ControllerPortName::all_port_names(){
+                let port_info  = &ports_data[&port_name];
+                let port_grid_info = &ports_grid_data[&port_name];
+                draw_port(
+                    port_info,
+                    port_grid_info,
+                    port_drawing_info,
+                    grid_to_screen,
+                )
+            }
+        }
+
+
+		cursor.draw_rect_lines(BLACK, 1.);
+		cursor.pad(1, 1).draw_rect(WHITE);
+
+		cursor.split(24, direction::Axis::Horizontal)
+		 	.with_padding(2, 2)
+			.draw_text_line("Controller", super::text::TextStyle::Normal, 1, BLACK);
+		
 	}
 }
 // pub 

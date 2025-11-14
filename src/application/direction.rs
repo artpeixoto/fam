@@ -3,7 +3,7 @@ use macroquad::math::{vec2, Vec2};
 use crate::application::draw::pos::{dist, Dist, ScreenUnit};
 
 pub use Direction::*;
-pub use HorOrVer::{*};
+pub use Axis::{*};
 
 #[derive(PartialEq, Eq, Debug, Hash, Clone, Copy )]
 pub enum Direction {
@@ -115,7 +115,7 @@ impl Neg for Direction {
 }
 
 impl Direction {
-    pub const fn horizontal_or_vertical(&self) -> HorOrVer{
+    pub const fn horizontal_or_vertical(&self) -> Axis{
         match self{
             Up    |
             Down  => Vertical,
@@ -127,7 +127,7 @@ impl Direction {
 
 
 #[derive(Eq, PartialEq, Debug, Hash, Clone, Copy )]
-pub enum HorOrVer{
+pub enum Axis{
     Horizontal,
     Vertical,
 }
