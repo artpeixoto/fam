@@ -1,7 +1,12 @@
 use HorOrVer::{Horizontal, Vertical};
+use macroquad::color::Color;
+use macroquad::math::IVec2;
+use macroquad::shapes::draw_rectangle;
 use crate::application::direction::{Direction, HorOrVer};
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
 use crate::application::draw::port::PortDrawingDefns;
+use crate::application::draw::shapes::{draw_line_pos, draw_rectangle_lines_pos};
+use crate::application::grid::line;
 use crate::application::grid::pos::{grid_dist, grid_size, GridPos, GridSize};
 use crate::application::draw::pos::{dist, pos, Dist, Pos, ScreenUnit, Size};
 
@@ -139,6 +144,41 @@ impl RectCursor{
         self
     }
 
+    pub fn draw_rect(&self, color: Color){
+        draw_rectangle(
+            self.top_left().x as f32,
+            self.top_left().y as f32,
+            self.remaining_size().x as f32,
+            self.remaining_size().y as f32,
+            color
+        );
+    }
+    pub fn get_line(&self, line_dir: Direction) -> (IVec2, IVec2){
+        match line_dir{
+            Direction::Up => (self.top_left(), self.top_right()),
+            Direction::Right => (self.top_right(), self.bottom_right()),
+            Direction::Down => (self.bottom_right(), self.bottom_left()),
+            Direction::Left => (self.bottom_left(), self.top_left()),
+        }
+    }
+
+    // pub fn draw_line_offset(&self, line: Direction, offset: ScreenUnit, color: Color, thickness: u8){
+    // }
+    pub fn draw_line(&self, line: Direction, color: Color, thickness: u8){
+        let (start, end) = self.get_line(line);
+        draw_line_pos(start, end,  thickness, color);
+    }
+
+    pub fn draw_rect_lines(&self, color: Color, thickness: f32){
+        draw_rectangle_lines_pos(
+            self.top_left(),
+            self.remaining_size(),
+            thickness,
+            color 
+        );
+    }
+    
+
     ///
     ///
     /// # Arguments
@@ -209,6 +249,7 @@ impl RectCursor{
         clone
     }
 }
+
 impl GridToScreenMapper {
     pub fn  get_cursor_for_region(&self, top_left: GridPos, size:GridSize ) -> RectCursor{
         let screen_top_left = self.grid_to_screen_pos(top_left);

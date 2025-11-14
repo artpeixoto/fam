@@ -118,6 +118,14 @@ pub enum TaluConfigWriter{
 
 
 impl TaluConfigWriter{
+	pub fn is_active(&self) -> bool{
+		match self{
+			TaluConfigWriter::Deactivated => false,
+			TaluConfigWriter::WritingToSingle {..} |
+			TaluConfigWriter::WritingToAll {..} => true,
+		}
+	}
+
 	pub fn get_config_write_request(&self) -> Option<TaluConfigWriteRequest>{
 		match &self{
 			TaluConfigWriter::Deactivated => {

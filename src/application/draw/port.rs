@@ -12,7 +12,7 @@ use crate::application::draw::pos::{Pos, ToFPosExt};
 pub enum SignalType{
     Data,
     Activation,
-    Setup,
+    TaluSetup,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]

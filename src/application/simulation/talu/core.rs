@@ -188,7 +188,7 @@ impl TaluCore {
             setup_in:  PortDefns{
                 active: true,
                 signal_dir: Input,
-                signal_type: SignalType::Setup 
+                signal_type: SignalType::TaluSetup 
             }
         }
     }

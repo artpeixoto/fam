@@ -2,8 +2,8 @@ use std::ops::{Mul, Neg};
 use macroquad::math::{vec2, Vec2};
 use crate::application::draw::pos::{dist, Dist, ScreenUnit};
 
-use Direction::*;
-use HorOrVer::{*};
+pub use Direction::*;
+pub use HorOrVer::{*};
 
 #[derive(PartialEq, Eq, Debug, Hash, Clone, Copy )]
 pub enum Direction {

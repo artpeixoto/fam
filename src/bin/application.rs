@@ -222,8 +222,8 @@ fn build_full_cpu(
                 PortColorIndex::Active(SignalType::Data, PortSignalDirection::Output) => {RED}
                 PortColorIndex::Active(SignalType::Activation, PortSignalDirection::Input) => {GREEN}
                 PortColorIndex::Active(SignalType::Activation, PortSignalDirection::Output) => {YELLOW}
-                PortColorIndex::Active(SignalType::Setup, PortSignalDirection::Input) => {VIOLET}
-                PortColorIndex::Active(SignalType::Setup, PortSignalDirection::Output) => {BROWN}
+                PortColorIndex::Active(SignalType::TaluSetup, PortSignalDirection::Input) => {VIOLET}
+                PortColorIndex::Active(SignalType::TaluSetup, PortSignalDirection::Output) => {BROWN}
             }
         }),
     };
