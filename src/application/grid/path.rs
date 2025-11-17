@@ -3,14 +3,15 @@ use std::ops::{Deref, Not};
 use std::rc::{Rc, Weak};
 use either::Either;
 use itertools::Itertools;
-use wgpu::naga::FastHashSet;
+use wgpu::naga::{FastHashMap, FastHashSet};
+use crate::application::connection::CpuConnection;
 use crate::application::direction::Direction;
 use crate::application::grid::blocked_point::BlockedPoints;
 use crate::application::grid::grid_limits::GridLimits;
 use crate::application::grid::movement::GridMovement;
 use crate::application::grid::pos::GridPos;
 
-pub type Paths = Vec<Path>;
+pub type Paths = FastHashMap<CpuConnection, Path>;
 
 #[derive(Debug, Eq, PartialEq,  Clone) ]
 pub enum InvalidPointReason{
@@ -29,23 +30,31 @@ pub enum PathSearchingFailure{
 pub fn find_path_a_star(
     from            : &GridPos,
     to              : &GridPos,
+    connection      : &CpuConnection, 
     existing_paths  : &Paths,
     blocked_points  : &BlockedPoints,
     grid_bounds     : &GridLimits,
 ) ->  Result<Path, PathSearchingFailure>{
     // first check everything.
     // if !grid_bounds.contains_point(from) {return }
-
     let mut moves_analyzed = 0_u64;
+
     let mut is_move_available = {
         let lines_used_by_other_paths =
             existing_paths
-                .iter()
-                .flat_map(|path| path.into_iter())
-                .map(|movement|
-                    movement.line
-                )
-                .collect::<FastHashSet<_>>();
+            .iter()
+            .filter(|&(path_conn, path)| {
+                // connection.first() != path_conn.
+                path_conn.first() != connection.first() && 
+                path_conn.first() != connection.second() &&
+                path_conn.second() != connection.first() &&
+                path_conn.second() != connection.second() 
+            })
+            .flat_map(|path| path.1.into_iter())
+            .map(|movement| movement.line )
+            .collect::<FastHashSet<_>>();
+
+
 
         move |movement: &GridMovement, visited_points: &FastHashSet<GridPos>| -> bool {
             // println!("analysing movement {} {:?} -{:?}-> {:?}", moves_analyzed, movement.starting_point, movement.move_dir, movement.destination_point);
@@ -91,7 +100,6 @@ pub fn find_path_a_star(
     };
     pub type Cost = u16;
 
-
     struct SearchNodeParentConn{
         parent  : Weak<SearchNode>,
         move_dir: Direction,
@@ -125,7 +133,7 @@ pub fn find_path_a_star(
         fn next(&mut self) -> Option<Self::Item> {
             let child = self.child.take()?;
             let child = match child{
-                Either::Left(a) => SearchNodeParentIteratorChildRef::Ref(a),
+                Either::Left(a)  => SearchNodeParentIteratorChildRef::Ref(a),
                 Either::Right(a) => SearchNodeParentIteratorChildRef::Rc(a),
             };
             if let Some(parent) = child.parent_conn.as_ref(){

@@ -207,6 +207,7 @@ impl CpuRegisterDataWriter{
                 target,
                 value: inner_value,
             } = self
+
         && let Some(val) = inner_value
         {
             Some(CpuRegisterWriteRequest{

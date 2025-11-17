@@ -1,5 +1,6 @@
 use std::ops::Deref;
 use std::sync::Arc;
+use crate::application::draw::instruction_memory::InstructionMemoryCurrentPosition;
 use crate::{Step,  PROGRAM_COUNTER_REGISTER_ADDR};
 use crate::application::simulation::cpu_registers::{CpuRegisterDataReader, CpuRegisterDataWriter, };
 use crate::application::simulation::instruction::Instruction;
@@ -52,17 +53,24 @@ impl InstructionReader{
 
 	pub fn read<'a>(&'a self) -> Option<impl Deref<Target=Instruction> + 'a>{
 		let addr = self.program_counter_reader.read().unwrap() as usize;
-		Some(self.instruction_memory.get(addr).unwrap())
+		self.instruction_memory.get(addr)
 	}
 
+	pub fn get_instruction_pos(&self) -> Option<InstructionMemoryCurrentPosition>{
+		Some(self.program_counter_reader.read()? as usize)
+	}
 	pub fn step(&mut self) {
 		match self.increment_cmd {
 		    IncrementCmd::Increment => {
 				let current_pc = self.program_counter_reader.read().unwrap() ;
+				self.program_counter_writer.set_connection(Some(PROGRAM_COUNTER_REGISTER_ADDR));
 				self.program_counter_writer.write(current_pc+1);
 			},
-			IncrementCmd::NoIncrement => {},
+			IncrementCmd::NoIncrement => {
+				self.program_counter_writer.set_connection(None);
+			},
 			IncrementCmd::GoTo(new_pc) => {
+				self.program_counter_writer.set_connection(Some(PROGRAM_COUNTER_REGISTER_ADDR));
 				self.program_counter_writer.write(new_pc );
 			}
 		}

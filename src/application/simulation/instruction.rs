@@ -7,9 +7,10 @@ pub const CONTROLLER_INSTRUCTION_SIZE   		: usize = 64;
 
 #[derive( PartialEq, Copy, Clone, Debug,Eq, Default)]
 pub enum Instruction {
+    
     SetTaluConfig{
-        talu_config	: TaluOperation, 
         talu_addr	: usize,
+        talu_config	: TaluOperation, 
     },
     
     SetLiteral{

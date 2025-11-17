@@ -53,8 +53,10 @@ impl Controller{
 		match self.state {
 			ControllerExecutionState::Running => {
 				let Some(current_instruction) = self.instruction_reader.read().map(|i| i.to_owned()) else
-				{return
-					false};
+				{
+					return
+					false
+				};
 
 				match current_instruction {
 					Instruction::SetTaluConfig {  talu_config, talu_addr, } => {

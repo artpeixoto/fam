@@ -9,6 +9,7 @@
 
 #![feature(
 	const_type_name,
+	adt_const_params,
 	slice_as_array,
 	bigint_helper_methods,
 	strict_overflow_ops,

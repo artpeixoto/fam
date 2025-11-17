@@ -1,5 +1,9 @@
 use itertools::Itertools;
+use macroquad::color::BLACK;
 use wgpu::naga::FastHashMap;
+use crate::application::direction::Axis;
+use crate::application::draw::cursor::RectCursor;
+use crate::application::draw::text::{TextStyle, draw_text_pos};
 use crate::application::grid::component::{DrawableComponent, PortDataContainer, PortName, ComponentGridData};
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
 use crate::application::draw::port::{PortDefns, PortDrawingDefns, PortGridDefns};
@@ -11,6 +15,7 @@ use crate::application::simulation::component_bank::ComponentBank;
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct ComponentBankDrawingDefn<CompDrawingDefn> {
+    pub name        : String, 
     pub size        : Size,
     pub row_count   : usize,
     pub inner_drawing_defns: CompDrawingDefn,
@@ -19,6 +24,7 @@ pub struct ComponentBankDrawingDefn<CompDrawingDefn> {
 impl<CompDrawingDefn: Default> Default for ComponentBankDrawingDefn<CompDrawingDefn> {
     fn default() -> Self {
         Self {
+            name: "Component Bank".to_string(),
             size: Size::new(1920 / 2, 1080 / 2),
             row_count: 4,
             inner_drawing_defns: CompDrawingDefn::default(),
@@ -76,6 +82,7 @@ pub struct ComponentBankGridData<
     const COMP_COUNT: usize
 >
 {
+    pub title_pos       : GridPos,
     pub grid_rect       : GridRect,
     pub blocked_points  : BlockedPoints,
     pub ports_data      : ComponentBankPortDataContainer<InnerComp::PortName, PortDefns, COMP_COUNT>,
@@ -133,8 +140,16 @@ where
         port_drawing_data: &PortDrawingDefns,
         grid_to_screen_mapper: &GridToScreenMapper
     ) -> Self::ComponentCalculatedDefns {
+        let mut cursor = RectCursor::new(grid_to_screen_mapper.grid_to_screen_pos(grid_top_left), drawing_data.size);
+
+        let title_height = TextStyle::W_I_D_E.get_dims().full_height() * 2 + 4;
+
+        let title_cursor =  cursor.split(title_height, Axis::Vertical).with_padding(0, 2);
+        let title_pos = grid_to_screen_mapper.screen_to_nearest_grid_pos(title_cursor.top_left());
+
+        let grid_top_left = grid_to_screen_mapper.screen_to_nearest_grid_pos(cursor.top_left());
+        let full_grid_size = grid_to_screen_mapper.screen_to_grid_size(cursor.remaining_size());
         let col_count = COMP_COUNT / drawing_data.row_count;
-        let full_grid_size = grid_to_screen_mapper.screen_to_grid_size(drawing_data.size);
 
         let inner_grid_size =
             self
@@ -213,6 +228,7 @@ where
         let inner_components_grid_datas = inner_components_grid_datas.into_boxed_slice()
             .into_array().unwrap();
         ComponentBankGridData{
+            title_pos: title_pos,
             grid_rect: grid_rect(grid_top_left, full_grid_size),
             blocked_points,
             ports_data: port_data,
@@ -229,6 +245,14 @@ where
         port_drawing_defns      : &PortDrawingDefns,
         grid_to_screen_mapper   : &GridToScreenMapper
     ) {
+        draw_text_pos(
+            &drawing_defns.name, 
+            grid_to_screen_mapper.grid_to_screen_pos(calculated_defns.title_pos), 
+            TextStyle::W_I_D_E,
+            2, 
+            BLACK
+        );
+
         for addr in 0..COMP_COUNT{
             let cur_comp = &self.components[addr];
             

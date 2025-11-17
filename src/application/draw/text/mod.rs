@@ -93,7 +93,7 @@ pub enum TextStyle{
     Tiny,
     #[default]
     Normal,
-    Wide ,
+    W_I_D_E ,
 }
 
 
@@ -103,14 +103,14 @@ impl TextStyle{
         match self{
             TextStyle::Tiny    => &tiny_font    ::FONT,
             TextStyle::Normal  => &normal_font  ::FONT,
-            TextStyle::Wide    => &title_font   ::FONT,
+            TextStyle::W_I_D_E    => &title_font   ::FONT,
         }
     }
     pub const fn get_dims(&self) -> &FontDimensions{
         match self{
             TextStyle::Tiny    => &tiny_font::DIMS,
             TextStyle::Normal  => &normal_font::DIMS,
-            TextStyle::Wide    => &title_font::DIMS,
+            TextStyle::W_I_D_E    => &title_font::DIMS,
         }
     }
 }

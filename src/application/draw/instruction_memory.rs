@@ -31,7 +31,7 @@ impl PortName for Never {
         panic!("genitals obliterated")
     }
 }
-pub struct InstructionMemoryCurrentPosition(pub usize);
+pub type InstructionMemoryCurrentPosition = usize;
 
 impl DrawableComponent for InstructionMemory {
     type DrawingState = InstructionMemoryCurrentPosition;
@@ -84,11 +84,12 @@ impl DrawableComponent for InstructionMemory {
         cursor.go(Dist::new(0, title_dims.height as ScreenUnit * 2 + 2));
         let initial_cursor = cursor.clone();
         {
-            let mut current_cell_ix = drawing_state.0;
+            let mut current_cell_ix = *drawing_state;
             loop {
                 let Some(current_instruction) = self.0.get(current_cell_ix).cloned() else {
                     break;
                 };
+
                 let instruction_value_text = format!("{:#?}", current_instruction);
                 let font_dims = normal_font::DIMS;
 
@@ -159,6 +160,7 @@ impl DrawableComponent for InstructionMemory {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstructionMemoryDrawingDefns {
     pub size: Size,
+    pub current_pos: InstructionMemoryCurrentPosition,
 }
 
 pub type InstructionMemoryGridDefns 

@@ -22,7 +22,7 @@ use crate::application::simulation::talu::TaluCoreState;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ControllerDrawingDefns{
-	size: Size 
+	pub size: Size 
 }
 
 impl Default for ControllerDrawingDefns{
@@ -56,7 +56,6 @@ impl DrawableComponent for Controller{
 		drawing_info     : &Self::DrawingDefn,
 		port_drawing_info: &PortDrawingDefns,
 		grid_to_screen   : &GridToScreenMapper,
-
 	) -> Self::ComponentCalculatedDefns {
         let grid_rect = {
             let reg_grid_size = grid_to_screen.screen_to_grid_size(drawing_info.size);
@@ -133,7 +132,7 @@ impl DrawableComponent for Controller{
 						direction : Direction::Right,
 					}
 				),
-				(   ControllerPortName::RegisterReader, 
+				(   ControllerPortName::RegisterWriter, 
 					PortGridDefns {
 						position: grid_pos(x_right, y_bottom - 3*y_delta),
 						direction : Direction::Right,
@@ -181,9 +180,20 @@ impl DrawableComponent for Controller{
 			..
 		} = grid_defns;
 
-		// DARKBROWN
-		let mut cursor = grid_to_screen.get_cursor_for_region(grid_rect.top_left, grid_rect.size);
+		let mut cursor = 
+			grid_to_screen
+			.get_cursor_for_region(grid_rect.top_left, grid_rect.size)
+			.moved_for_port(Direction::Left, port_drawing_info)
+			.moved_for_port(Direction::Right, port_drawing_info)
+			;
 
+		cursor.draw_rect_lines(BLACK, 1.);
+		cursor.pad(1, 1).draw_rect(WHITE);
+
+		cursor.split(24, direction::Axis::Horizontal)
+		 	.with_padding(2, 2)
+			.draw_text_line("CONTROLLER", super::text::TextStyle::Normal, 1, BLACK);
+		
         { // draw ports
             for port_name in ControllerPortName::all_port_names(){
                 let port_info  = &ports_data[&port_name];
@@ -198,12 +208,6 @@ impl DrawableComponent for Controller{
         }
 
 
-		cursor.draw_rect_lines(BLACK, 1.);
-		cursor.pad(1, 1).draw_rect(WHITE);
-
-		cursor.split(24, direction::Axis::Horizontal)
-		 	.with_padding(2, 2)
-			.draw_text_line("Controller", super::text::TextStyle::Normal, 1, BLACK);
 		
 	}
 }

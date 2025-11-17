@@ -1,4 +1,4 @@
-use crate::application::simulation::talu::{TALU_COUNT, TaluAddress};
+use crate::application::simulation::talu::{CmpOp, TALU_COUNT, TaluAddress};
 use crate::application::direction::Direction;
 use crate::application::direction::Axis::Vertical;
 use crate::application::draw::component_bank::{ComponentBankDrawingDefn, ComponentBankGridData};
@@ -130,12 +130,10 @@ impl DrawableComponent for TaluCore {
                 };
 
                 for port_name in TaluPortName::all_port_names() {
-
                     let port_info = talu_ports_info.get_for_port(&port_name);
                     let port_grid_info = talu_ports_grid_info.get_for_port(&port_name);
 
                     draw_port(
-
                         port_info,
                         port_grid_info,
                         port_drawing_data,
@@ -207,7 +205,7 @@ impl DrawableComponent for TaluCore {
             cursor.pad(1, 1);
 
             draw_text_line_tiny(
-                &format!("ALU {:2x}", self.addr),
+                &format!("TALU {:2x}", self.addr),
                 (cursor.top_left() + pos(2, 4)),
                 1,
                 WHITE,
@@ -228,22 +226,30 @@ impl DrawableComponent for TaluCore {
 
             let operation_text = {
                 match talu_op {
+                    TaluOperation::Mov{..} => {"MOV"},
                     TaluOperation::NoOp => { "NOP" }
-                    TaluOperation::Eq { .. } => { "==" }
+                    TaluOperation::Cmp { op, .. } => match op {
+                        CmpOp::LessThan => "LT",
+                        CmpOp::LessThanOrEq => "LE",
+                        CmpOp::GreaterThan => "GT",
+                        CmpOp::GreaterThanOrEq => "GE",
+                        CmpOp::Eq => "EQ",
+                        CmpOp::NotEq => "NEQ",
+                    },
                     // TaluOperation::Mov { .. } => {"MOV"}
                     TaluOperation::Latch { .. } => { "LAT" }
-                    TaluOperation::Not { .. } => { "!" }
-                    TaluOperation::And { .. } => { "&&" }
-                    TaluOperation::Or { .. } => { "||" }
-                    TaluOperation::Xor { .. } => { "^" }
-                    TaluOperation::ShiftLeft { .. } => { "<<" }
-                    TaluOperation::ShiftRight { .. } => { ">>" }
+                    TaluOperation::Not { .. } => { "NOT" }
+                    TaluOperation::And { .. } => { "AND" }
+                    TaluOperation::Or { .. } => { "OR" }
+                    TaluOperation::Xor { .. } => { "XOR" }
+                    TaluOperation::ShiftLeft { .. } => { "SHL"}
+                    TaluOperation::ShiftRight { .. } => { "SHR" }
                     TaluOperation::SelectPart { .. } => { "SEL" }
-                    TaluOperation::Add { .. } => { "+" }
-                    TaluOperation::Sub { .. } => { "-" }
-                    TaluOperation::Mul { .. } => { "*" }
-                    TaluOperation::Div { .. } => { "/" }
-                    TaluOperation::Rem { .. } => { "%" }
+                    TaluOperation::Add { .. } => { "ADD" }
+                    TaluOperation::Sub { .. } => { "SUB" }
+                    TaluOperation::Mul { .. } => { "MUL" }
+                    TaluOperation::Div { .. } => { "DIV" }
+                    TaluOperation::Rem { .. } => { "REM" }
                     TaluOperation::Neg { .. } => { "NEG" }
                     TaluOperation::ReadFromMem { .. } => { "READ" }
                     TaluOperation::WriteToMem { .. } => { "WRIT" }

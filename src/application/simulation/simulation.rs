@@ -17,12 +17,12 @@ use crate::word::Word;
 
 #[derive(Getters)]
 pub struct Cpu {
-    pub talu_bank            : TaluBank,
+    pub talu_bank           : TaluBank,
     pub register_bank       : CpuRegisterBank,
     pub controller          : Controller,
     pub instruction_memory  : InstructionMemory,
     pub main_memory         : MainMemory,
-
+    pub is_done             : bool,
     // #[getset(get="pub")]
     pub connections             : FastHashSet<CpuConnection>
 }
@@ -30,7 +30,10 @@ pub struct Cpu {
 impl Cpu {
     #[must_use]
     pub fn execute(&mut self) -> bool {
+        if self.is_done { return false; }
+
         self.connections.clear();
+
         if let Some(mut controller_read_req) =
             self.controller.cpu_registers_reader.get_read_request() {
             self.connections.insert(CpuConnection::new(
@@ -54,7 +57,8 @@ impl Cpu {
             self.connections.insert(CpuConnection::new(
                 CpuConnectionEndpoint::Controller(ControllerPortName::MainMemoryReader), 
                 CpuConnectionEndpoint::Register(
-                    PROGRAM_COUNTER_REGISTER_ADDR, CpuRegisterPortName::Output
+                    PROGRAM_COUNTER_REGISTER_ADDR, 
+                    CpuRegisterPortName::Output
                 )
            ));
 
@@ -101,9 +105,8 @@ impl Cpu {
         }
 
         if self.controller.execute().not(){
-            return false;
+            self.is_done = true;
         };
-
 
         for talu in self.talu_bank.components.iter_mut(){
             talu.execute();
@@ -124,14 +127,13 @@ impl Cpu {
         if let Some(req) = self.controller.cpu_registers_writer.get_write_request(){
             self.connections.insert( CpuConnection::new(
                 CpuConnectionEndpoint::Controller(ControllerPortName::RegisterWriter),
-                CpuConnectionEndpoint::Register(req.addr(), CpuRegisterPortName::Output)
+                CpuConnectionEndpoint::Register(req.addr(), CpuRegisterPortName::Input)
             ));
 
             req.satisfy(&mut self.register_bank);
         }
 
         if let Some(write_pc_req) = self.controller.instruction_reader.program_counter_writer.get_write_request(){
-
             self.connections.insert( CpuConnection::new(
                 CpuConnectionEndpoint::Controller(ControllerPortName::RegisterWriter),
                 CpuConnectionEndpoint::Register(
@@ -142,7 +144,7 @@ impl Cpu {
 
             write_pc_req.satisfy(&mut self.register_bank);
         }
-        true
+        return !self.is_done ;
     }
 }
 

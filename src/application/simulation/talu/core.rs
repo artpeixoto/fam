@@ -3,6 +3,7 @@ use super::TaluOperation;
 use crate::application::draw::port::SignalType::Activation;
 use crate::application::draw::port::{PortDefns, PortSignalDirection, SignalType};
 use crate::application::grid::component::{PortDataContainer, PortName};
+use crate::application::simulation::talu::CmpOp;
 use crate::application::simulation::talu::TaluPortName::{
     ActivationIn, ActivationOut, DataIn0, DataIn1, DataOut0, DataOut1, SetupIn
 };
@@ -156,32 +157,32 @@ impl TaluCore {
         let ports_data = self.operation.get_ports_config();
         TaluPortsDefns {
             data_input_0: PortDefns {
-                active: ports_data.data_input_0.is_some(),
+                active: true,
                 signal_dir: Input,
                 signal_type: Data,
             },
             data_input_1: PortDefns {
-                active: ports_data.data_input_1.is_some(),
+                active: true,
                 signal_dir: Input,
                 signal_type: Data,
             },
             activation_input: PortDefns {
-                active: ports_data.activation_input.is_some(),
+                active: true,
                 signal_dir: Input,
                 signal_type: Activation,
             },
             data_output_0: PortDefns {
-                active: ports_data.data_output_0.is_some(),
+                active: true,
                 signal_dir: Output,
                 signal_type: Data,
             },
             data_output_1: PortDefns {
-                active: ports_data.data_output_1.is_some(),
+                active: true,
                 signal_dir: Output,
                 signal_type: Data,
             },
             activation_output: PortDefns {
-                active: ports_data.activation_output.is_some(),
+                active: true,
                 signal_dir: Output,
                 signal_type: Activation,
             },
@@ -216,12 +217,22 @@ impl TaluCore {
     pub fn execute(&mut self) {
         let op = self.operation;
         match &op {
+            TaluOperation::Mov { activation_input, value_input, data_output, activation_output } => {
+
+            }
             TaluOperation::NoOp => {}
-            TaluOperation::Eq { .. } => {
+            TaluOperation::Cmp { op, .. } => {
                 if self.activation_input.read().unwrap() {
                     let in_0 = self.data_input_0.read().unwrap();
                     let in_1 = self.data_input_1.read().unwrap();
-                    let res = in_0 == in_1;
+                    let res = match  op{
+                        CmpOp::LessThan => in_0 < in_1,
+                        CmpOp::LessThanOrEq => in_0 <= in_1,
+                        CmpOp::GreaterThan => in_0 > in_1,
+                        CmpOp::GreaterThanOrEq => in_0 >= in_1,
+                        CmpOp::Eq => in_0 == in_1,
+                        CmpOp::NotEq => in_0 != in_1,
+                    };
                     self.data_output_0.write(res.to_word());
                     self.activation_output.write(true)
                 } else {

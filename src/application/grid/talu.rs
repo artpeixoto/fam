@@ -18,7 +18,7 @@ pub struct TaluPortsGridDefns {
     pub data_out_1      : PortGridDefns,
     pub activation_out  : PortGridDefns,
 
-    pub setup_in     : PortGridDefns,
+    pub setup_in        : PortGridDefns,
 }
 
 pub type TaluGridDefns =

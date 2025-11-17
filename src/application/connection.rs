@@ -18,6 +18,7 @@ pub struct CpuConnection{
     second: CpuConnectionEndpoint,
 }
 
+
 impl CpuConnection{
     pub fn new(first_endpoint: CpuConnectionEndpoint, second_endpoint: CpuConnectionEndpoint)-> Self{
         let first = min(first_endpoint.clone(), second_endpoint.clone());

@@ -5,24 +5,34 @@ pub enum MovInput {
     Source(CpuRegisterAddress),
     // SourceAddr(CpuRegisterAddress),
 }
+#[derive(Clone, PartialEq, Eq, Debug, Copy)]
+pub enum CmpOp{
+    LessThan,
+    LessThanOrEq,
+    GreaterThan,
+    GreaterThanOrEq,
+    Eq,
+    NotEq
+}
 
 #[derive(Clone, PartialEq, Eq, Debug, Copy)]
 pub enum TaluOperation {
     NoOp,
-    Eq {
+    Cmp {
+        op: CmpOp,
         activation_input    : CpuRegisterAddress,
         activation_output   : Option<CpuRegisterAddress>,
         data_input_0        : CpuRegisterAddress,
         data_input_1        : CpuRegisterAddress,
         data_output         : CpuRegisterAddress,
     },
-    // Mov {
-    //     activation_input    : CpuRegisterAddress,
-    //     value_input         : CpuRegisterAddress,
-    //     // address_input       : MovInput,
-    //     data_output         : CpuRegisterAddress,
-    //     activation_output   : Option<CpuRegisterAddress>,
-    // },
+    Mov {
+        activation_input    : CpuRegisterAddress,
+        value_input         : CpuRegisterAddress,
+        // address_input       : MovInput,
+        data_output         : CpuRegisterAddress,
+        activation_output   : Option<CpuRegisterAddress>,
+    },
     Latch {
         activation_input  : CpuRegisterAddress,
         data_input        : CpuRegisterAddress,
@@ -82,7 +92,7 @@ pub enum TaluOperation {
         activation_input  : CpuRegisterAddress,
         data_input_1            : CpuRegisterAddress,
         data_input_0            : CpuRegisterAddress,
-        data_output_0        : CpuRegisterAddress,
+        result_output        : CpuRegisterAddress,
         flags_output            : Option<CpuRegisterAddress>,
         activation_output : Option<CpuRegisterAddress>,
     },
@@ -118,14 +128,12 @@ pub enum TaluOperation {
         div_by_zero_flag_output : Option<CpuRegisterAddress>,
         activation_output : Option<CpuRegisterAddress>,
     },
-
     Neg {
         activation_input: CpuRegisterAddress,
         input: CpuRegisterAddress,
         data_output_0: CpuRegisterAddress,
         activation_output: Option<CpuRegisterAddress>,
     },
-
     ReadFromMem {
         activation_input: CpuRegisterAddress,
         data_input_0: CpuRegisterAddress,
@@ -150,6 +158,16 @@ pub struct TaluPortsConfig {
 impl TaluOperation {
     pub fn get_ports_config(&self) -> TaluPortsConfig {
         match self.clone() {
+            Self::Mov { activation_input, value_input, data_output, activation_output } => {
+                TaluPortsConfig{
+                    data_input_0: Some(value_input),
+                    data_input_1: None,
+                    activation_input: Some(activation_input),
+                    data_output_0: Some(data_output),
+                    activation_output: activation_output,
+                    data_output_1: None,
+                }
+            }
             TaluOperation::NoOp => TaluPortsConfig {
                 data_input_0: None,
                 data_input_1: None,
@@ -159,7 +177,8 @@ impl TaluOperation {
                 activation_output: None,
             },
 
-            TaluOperation::Eq {
+            TaluOperation::Cmp {
+                op: _op,
                 activation_input,
                 activation_output,
                 data_input_0,
@@ -302,7 +321,7 @@ impl TaluOperation {
                 activation_input,
                 data_input_1,
                 data_input_0,
-                data_output_0,
+                result_output: data_output_0,
                 flags_output,
                 activation_output,
             } => TaluPortsConfig {
