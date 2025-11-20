@@ -39,13 +39,7 @@ pub fn find_path_a_star(
     blocked_points  : &BlockedPoints,
     grid_bounds     : &GridLimits,
 ) ->  Result<Path, PathSearchingFailure>{
-    // first check everything.
-    // if !grid_bounds.contains_point(from) {return }
-    let mut moves_analyzed = 0_u64;
-
     let this_netlist = netlists.get_for_connection(connection);
-
-
 
     let (unconnected_paths, connected_paths) ={
         let mut unconnected_paths   = FastHashMap::default().with(|this|this.reserve(existing_paths.len()));
@@ -60,6 +54,7 @@ pub fn find_path_a_star(
         }
         (unconnected_paths, connected_paths)
     };
+
 
     
     let mut get_move_cost = {
@@ -79,7 +74,6 @@ pub fn find_path_a_star(
 
         move |movement: &GridMovement, visited_points: &FastHashSet<GridPos>| -> Cost {
             // println!("analysing movement {} {:?} -{:?}-> {:?}", moves_analyzed, movement.starting_point, movement.move_dir, movement.destination_point);
-            moves_analyzed +=1;
             let line = &movement.line;
             let mut cost = 1;
             
@@ -118,6 +112,15 @@ pub fn find_path_a_star(
             return cost 
         }
     };
+    let (from, to) = {
+        let connected_endpoints = connected_paths.keys().flat_map(|conn| [ conn.first(), conn.second() ]).collect::<FastHashSet<_>>();
+        if (connected_endpoints.contains(connection.first())){
+            (to, from)
+        } else {
+            (from, to)
+        }
+    };
+
 
     let all_destination_points = 
         connected_paths
