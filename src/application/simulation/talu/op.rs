@@ -136,15 +136,15 @@ pub enum TaluOperation {
     },
     ReadFromMem {
         activation_input: CpuRegisterAddress,
-        data_input_0: CpuRegisterAddress,
-        data_output_0: CpuRegisterAddress,
+        address_input: CpuRegisterAddress,
+        data_output: CpuRegisterAddress,
         activation_output: Option<CpuRegisterAddress>,
     },
     WriteToMem {
-        activation_input  : CpuRegisterAddress,
-        address_input           : CpuRegisterAddress,
         data_input              : CpuRegisterAddress,
-        activation_output : Option<CpuRegisterAddress>,
+        address_input           : CpuRegisterAddress,
+        activation_input        : CpuRegisterAddress,
+        activation_output       : Option<CpuRegisterAddress>,
     },
 }
 pub struct TaluPortsConfig {
@@ -407,8 +407,8 @@ impl TaluOperation {
             },
             TaluOperation::ReadFromMem {
                 activation_input,
-                data_input_0: addr_input,
-                data_output_0,
+                address_input: addr_input,
+                data_output: data_output_0,
                 activation_output,
             } => TaluPortsConfig {
                 data_input_0: Some(addr_input),

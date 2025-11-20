@@ -9,15 +9,17 @@ use std::fmt::Debug;
 
 #[derive( PartialEq, Eq, Copy, Clone, Debug, )]
 pub enum ControllerExecutionState {
-	Running,
+	ReadingInstruction,
+	Processing,
 	WaitingForActivation,
 }
 pub struct Controller{
+	pub state					: ControllerExecutionState,
+
 	pub cpu_registers_reader	: CpuRegisterDataReader,
 	pub cpu_registers_writer	: CpuRegisterDataWriter,
 	
 	pub talu_config_writer		: TaluConfigWriter	,
-	pub state					: ControllerExecutionState,
 	pub instruction_reader  	: InstructionReader,
 	
 	previous_instruction		: Option<Instruction>,
@@ -39,7 +41,7 @@ impl Controller{
 			cpu_registers_writer: CpuRegisterDataWriter::new(),
 			talu_config_writer   : configurator,
 			instruction_reader,
-			state				: ControllerExecutionState::Running
+			state				: ControllerExecutionState::ReadingInstruction,
 		}	
 	}
 
@@ -51,7 +53,12 @@ impl Controller{
 	#[must_use]
 	pub fn execute(&mut self) -> bool {
 		match self.state {
-			ControllerExecutionState::Running => {
+			ControllerExecutionState::ReadingInstruction => {
+				self.instruction_reader.set_increment_cmd(NoIncrement);
+				self.reset_outputs();
+				self.state = ControllerExecutionState::Processing;
+			}
+			ControllerExecutionState::Processing => {
 				let Some(current_instruction) = self.instruction_reader.read().map(|i| i.to_owned()) else
 				{
 					return
@@ -66,11 +73,13 @@ impl Controller{
 						};
 
 						self.instruction_reader.set_increment_cmd(Increment);
+						self.state = ControllerExecutionState::ReadingInstruction;
 					}
 					Instruction::SetLiteral {  literal , register,} => {
 						self.cpu_registers_writer.set_connection(Some(register));
 						self.cpu_registers_writer.write(literal);
 						self.instruction_reader.set_increment_cmd(Increment);
+						self.state = ControllerExecutionState::ReadingInstruction;
 					}
 					Instruction::WaitForActivationSignal { register_index } => {
 						self.cpu_registers_reader.set_connection(Some(register_index));
@@ -79,14 +88,17 @@ impl Controller{
 					}
 					Instruction::Jump { addr } => {
 						self.instruction_reader.set_increment_cmd(GoTo(addr));
+						self.state = ControllerExecutionState::ReadingInstruction;
 					}
 					Instruction::ResetAll => {
 						self.talu_config_writer = TaluConfigWriter::WritingToAll {op:
 						TaluOperation::NoOp};
 						self.instruction_reader.set_increment_cmd(Increment);
+						self.state = ControllerExecutionState::ReadingInstruction;
 					}
 					Instruction::NoOp => {
 						self.instruction_reader.set_increment_cmd(Increment);
+						self.state = ControllerExecutionState::ReadingInstruction;
 					}
 				}
 			}
@@ -94,7 +106,7 @@ impl Controller{
 				let is_activated = self.cpu_registers_reader.read().unwrap().to_bool();
 				if is_activated {
 					self.instruction_reader.set_increment_cmd(Increment);
-					self.state =  ControllerExecutionState::Running;
+					self.state =  ControllerExecutionState::ReadingInstruction;
 				} else {
 					self.instruction_reader.set_increment_cmd(NoIncrement);
 				}

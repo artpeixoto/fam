@@ -115,7 +115,7 @@ impl Neg for Direction {
 }
 
 impl Direction {
-    pub const fn horizontal_or_vertical(&self) -> Axis{
+    pub const fn axis(&self) -> Axis{
         match self{
             Up    |
             Down  => Vertical,
@@ -131,3 +131,4 @@ pub enum Axis{
     Horizontal,
     Vertical,
 }
+

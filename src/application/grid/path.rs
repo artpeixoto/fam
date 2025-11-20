@@ -1,4 +1,5 @@
 use std::collections::{BTreeMap, VecDeque};
+use std::iter;
 use std::ops::{Deref, Not};
 use std::rc::{Rc, Weak};
 use either::Either;
@@ -10,6 +11,8 @@ use crate::application::grid::blocked_point::BlockedPoints;
 use crate::application::grid::grid_limits::GridLimits;
 use crate::application::grid::movement::GridMovement;
 use crate::application::grid::pos::GridPos;
+use crate::application::simulation::simulation::Netlists;
+use crate::tools::used_in::With;
 
 pub type Paths = FastHashMap<CpuConnection, Path>;
 
@@ -32,6 +35,7 @@ pub fn find_path_a_star(
     to              : &GridPos,
     connection      : &CpuConnection, 
     existing_paths  : &Paths,
+    netlists        : &Netlists,
     blocked_points  : &BlockedPoints,
     grid_bounds     : &GridLimits,
 ) ->  Result<Path, PathSearchingFailure>{
@@ -39,43 +43,65 @@ pub fn find_path_a_star(
     // if !grid_bounds.contains_point(from) {return }
     let mut moves_analyzed = 0_u64;
 
-    let mut is_move_available = {
+    let this_netlist = netlists.get_for_connection(connection);
+
+
+
+    let (unconnected_paths, connected_paths) ={
+        let mut unconnected_paths   = FastHashMap::default().with(|this|this.reserve(existing_paths.len()));
+        let mut connected_paths     = FastHashMap::default().with(|this|this.reserve(existing_paths.len()));
+        for ( conn, path ) in existing_paths.iter(){
+            let is_netlist_same = netlists.get_for_connection(conn) == this_netlist;
+            if is_netlist_same{
+                connected_paths.insert(conn, path);
+            } else {
+                unconnected_paths.insert(conn, path);
+            }
+        }
+        (unconnected_paths, connected_paths)
+    };
+
+    
+    let mut get_move_cost = {
         let lines_used_by_other_paths =
-            existing_paths
-            .iter()
-            .filter(|&(path_conn, path)| {
-                // connection.first() != path_conn.
-                path_conn.first() != connection.first() && 
-                path_conn.first() != connection.second() &&
-                path_conn.second() != connection.first() &&
-                path_conn.second() != connection.second() 
-            })
+            unconnected_paths
+            .iter() 
             .flat_map(|path| path.1.into_iter())
             .map(|movement| movement.line )
             .collect::<FastHashSet<_>>();
 
+        let points_used_by_other_paths = 
+            unconnected_paths
+            .iter() 
+            .flat_map(|path| path.1.into_iter())
+            .flat_map(|movement| [movement.starting_point, movement.destination_point] )
+            .collect::<FastHashSet<_>>();
 
-
-        move |movement: &GridMovement, visited_points: &FastHashSet<GridPos>| -> bool {
+        move |movement: &GridMovement, visited_points: &FastHashSet<GridPos>| -> Cost {
             // println!("analysing movement {} {:?} -{:?}-> {:?}", moves_analyzed, movement.starting_point, movement.move_dir, movement.destination_point);
             moves_analyzed +=1;
             let line = &movement.line;
-
+            let mut cost = 1;
+            
             let line_is_in_bounds = grid_bounds.contains_line(line);
-            if  !line_is_in_bounds {return false}
+            if  !line_is_in_bounds {cost += 1000}
             // println!("\tline is in bounds: {:?}", line_is_in_bounds);
 
             let line_is_not_blocked = line.points().into_iter().all(|p| blocked_points.point_is_available(&p));
             // println!("\tline is not blocked: {:?}", line_is_not_blocked);
-            if !line_is_not_blocked {return false}
+            if !line_is_not_blocked {cost += 100}
 
             let line_is_available = !lines_used_by_other_paths.contains(line);
             // println!("\tline is available: {:?}", line_is_available);
-            if !line_is_available {return false}
+            if !line_is_available {cost += 1000}
+
+            let point_is_available = !points_used_by_other_paths.contains(&movement.destination_point);
+            if !point_is_available {cost += 10}
+
 
             let point_has_not_been_visited = visited_points.contains(&movement.destination_point).not();
             // println!("\tpoint_has_not_been_visited: {:?}", line_is_available);
-            if !point_has_not_been_visited {return false}
+            if !point_has_not_been_visited {cost += 10000}
             // let movement_target_has_not_been_visited =
             //     node_walker
             //         .into_iter()
@@ -89,16 +115,38 @@ pub fn find_path_a_star(
             // println!("\tpoint has not been visited: {:?}", movement_target_has_not_been_visited);
             // if !movement_target_has_not_been_visited {return false}
 
-
-
-            true
+            return cost 
         }
     };
 
-    let estimate_cost = |start: &GridPos, end: &GridPos| -> Cost{
-        start.x.abs_diff(end.x) + start.y.abs_diff(end.y)
+    let all_destination_points = 
+        connected_paths
+        .iter() 
+        .flat_map(|path| path.1.into_iter())
+        .flat_map(|movement| [movement.starting_point, movement.destination_point] )
+        .chain(iter::once(*to))
+        .collect::<FastHashSet<_>>();
+
+    let estimate_cost = |start: &GridPos| -> Cost{
+        let estimate_cost_for_point = |start: &GridPos, end: &GridPos| -> Cost {
+            let x_dist = start.x.abs_diff(end.x) as f32; 
+            let y_dist = start.y.abs_diff(end.y) as f32;
+            ( x_dist + y_dist ) as Cost
+        };
+        // let estimate_cost_for_point = |start: &GridPos, end: &GridPos| -> Cost {
+        //     let x_dist = start.x.abs_diff(end.x) as f32; 
+        //     let y_dist = start.y.abs_diff(end.y) as f32;
+        //     (x_dist.powi(2) + y_dist.powi(2)).sqrt() as Cost
+        // };
+        let min_cost = all_destination_points.iter().map(|dest| estimate_cost_for_point(start, dest)).min().unwrap();
+        min_cost
     };
-    pub type Cost = u16;
+
+    let get_is_done = |pos: &GridPos| -> bool{
+        all_destination_points.contains(pos)
+    };
+
+    pub type Cost = u32;
 
     struct SearchNodeParentConn{
         parent  : Weak<SearchNode>,
@@ -111,13 +159,16 @@ pub fn find_path_a_star(
         estimated_remaining_cost : Cost,
         accumulated_cost         : Cost,
     }
+
     struct SearchNodeParentIterator<'a>{
         child: Option<Either<&'a SearchNode, Rc<SearchNode>>>
     }
+
     enum SearchNodeParentIteratorChildRef<'a>{
         Ref(&'a SearchNode),
         Rc(Rc<SearchNode>),
     }
+
     impl<'a> Deref for SearchNodeParentIteratorChildRef<'a>{
         type Target = SearchNode;
 
@@ -128,6 +179,7 @@ pub fn find_path_a_star(
             }
         }
     }
+
     impl<'a> Iterator for SearchNodeParentIterator<'a>{
         type Item = SearchNodeParentIteratorChildRef<'a>;
         fn next(&mut self) -> Option<Self::Item> {
@@ -224,7 +276,7 @@ pub fn find_path_a_star(
         SearchNode {
             parent_conn: None,
             position: *from,
-            estimated_remaining_cost: estimate_cost(from, to),
+            estimated_remaining_cost: estimate_cost(from),
             accumulated_cost: 0,
         }
     );
@@ -233,7 +285,7 @@ pub fn find_path_a_star(
         let node = Rc::new(node);
         opened.push(node.clone());
 
-        if &node.position == to{
+        if get_is_done(&node.position){
             return Ok(node.get_path())
         }
 
@@ -245,10 +297,10 @@ pub fn find_path_a_star(
         let moves = get_next_moves(&node);
 
         for m in moves{
-            if !is_move_available(&m, &visited_points){ continue }
             let position = m.destination_point;
-            let estimated_remaining_cost = estimate_cost(&m.destination_point, to);
-            let accumulated_cost  = node.accumulated_cost + 1;
+            let estimated_remaining_cost = estimate_cost(&m.destination_point);
+            let move_cost = get_move_cost(&m, &visited_points);
+            let accumulated_cost  = node.accumulated_cost + move_cost;
             let new_node = SearchNode{
                 parent_conn: Some(SearchNodeParentConn{
                     parent: Rc::downgrade(&node),
@@ -265,11 +317,15 @@ pub fn find_path_a_star(
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Path{
     starting_point  : GridPos,
     movements       : Vec<Direction>,
 }
 impl Path{
+    pub fn get_starting_point(&self) -> GridPos{
+        self.starting_point
+    }
     pub fn walk(&self) -> PathWalker{
         PathWalker{
             path: &self,

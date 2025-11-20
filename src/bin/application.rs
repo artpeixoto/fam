@@ -27,7 +27,7 @@ use fam::application::simulation::cpu_registers::{CpuRegisterBank, REGISTER_COUN
 use fam::application::simulation::instruction::Instruction;
 use fam::application::simulation::instruction_reader::InstructionMemory;
 use fam::application::simulation::main_memory::MainMemory;
-use fam::application::simulation::simulation::Cpu;
+use fam::application::simulation::simulation::{Cpu, Netlists};
 use fam::application::simulation::talu::{CmpOp, TALU_COUNT, TaluBank, TaluOperation};
 use fam::word::Word;
 use macroquad::input::get_keys_pressed;
@@ -45,7 +45,7 @@ async fn amain() {
 
     let screen_size = size(1600, 900);
 
-    let grid_limits = GridLimits::new(u16vec2(screen_size.x as u16 / 4, screen_size.y as u16 / 4));
+    let grid_limits = GridLimits::new(u16vec2(screen_size.x as u16 / 5, screen_size.y as u16 / 5));
 
     let grid_to_screen_mapper = GridToScreenMapper::new(
         &grid_limits,
@@ -79,7 +79,7 @@ pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
 
     let loop_count_reg = 2;
     let start_reg = 3;
-    let finished_reg = 4;
+    let finished_reg = 30;
     let ix_reg = 5;
     let ix_lt_loop_reg = 6;
 
@@ -91,6 +91,7 @@ pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
     let word_reg = 11;
     let word_ready_reg = 12;
     let write_finished_reg = 13;
+    let is_final_reg = 14;
 
     let program = Vec::from_iter([
         Instruction::SetLiteral {
@@ -162,21 +163,22 @@ pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
             talu_addr: 3,
             talu_config: TaluOperation::ReadFromMem {
                 activation_input: start_inner_reg,
-                data_input_0: source_addr_reg,
-                data_output_0: word_reg,
+                address_input: source_addr_reg,
+                data_output: word_reg,
                 activation_output: Some(word_ready_reg),
             },
         },
         Instruction::SetTaluConfig {
             talu_addr: 4,
             talu_config: TaluOperation::WriteToMem {
-                activation_input: word_ready_reg,
                 address_input: target_addr_reg,
                 data_input: word_reg,
+
+                activation_input: word_ready_reg,
                 activation_output: Some(write_finished_reg),
             },
         },
-       Instruction::SetTaluConfig {
+        Instruction::SetTaluConfig {
             talu_addr: 5,
             talu_config: TaluOperation::Add {
                 activation_input: write_finished_reg,
@@ -207,19 +209,41 @@ pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
                 activation_output: None,
             },
         },
- 
+        Instruction::SetTaluConfig {
+            talu_addr: 8,
+            talu_config: TaluOperation::Cmp {
+                op: CmpOp::Eq,
+                data_input_0: ix_reg,
+                data_input_1: loop_count_reg,
+                activation_input: 1,
+
+                data_output: is_final_reg,
+                activation_output: None,
+            },
+        },
+        Instruction::SetTaluConfig {
+            talu_addr: 9,
+            talu_config: TaluOperation::And {
+                data_input_0: is_final_reg,
+                data_input_1: start_reg,
+                activation_input: 1,
+
+                data_output_0: finished_reg,
+                activation_output: None,
+            },
+        },
         Instruction::SetLiteral {
             literal: 1,
-            register: 2,
+            register: start_reg,
         },
         Instruction::SetLiteral {
             literal: 0,
-            register: 2,
+            register: start_reg,
         },
-        Instruction::WaitForActivationSignal { register_index: 4 }, // 128
+        Instruction::WaitForActivationSignal { register_index: finished_reg }, // 128
     ]);
 
-    let data = vec![1,2,3,4,5,0,0,0,0,0,0];
+    let data = vec![1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0];
 
     (program, data)
 }
@@ -236,11 +260,16 @@ pub struct Application {
     pub grid_to_screen_mapper: GridToScreenMapper,
     pub grid_limits: GridLimits,
 }
+
 impl Application {
     pub fn draw(&self) {
         draw_full_cpu(&self.cpu, &self.grid_limits, &self.grid_to_screen_mapper);
 
-        draw_paths(&self.cpu.grid.paths, &self.grid_to_screen_mapper);
+        draw_paths(
+            &self.cpu.grid.paths,
+            &self.cpu.sim.netlists,
+            &self.grid_to_screen_mapper,
+        );
         // draw_fps();
     }
 
@@ -257,9 +286,14 @@ impl Application {
             self.cpu.drawing.instruction_memory.current_pos = instruction_addr;
         }
         self.cpu.grid.update_blocked_points();
-        self.cpu
-            .grid
-            .calculate_paths(&self.cpu.sim.connections, &self.grid_limits);
+        self.cpu.grid.calculate_paths(
+            &self.cpu.sim.connections,
+            &self.cpu.sim.netlists,
+            &self.grid_limits,
+        );
+        if let Ok(val) = self.cpu.sim.main_memory.0.read(){
+            println!("Main memory is: {:?}", val.as_slice())
+        }
         return should_continue;
     }
 }
@@ -269,14 +303,18 @@ fn draw_fps() {
     draw_rectangle_pos(pos(0, 0), dist(200, 30), BLACK);
     macroquad::prelude::draw_fps();
 }
+pub static PATH_COLORS: &'static [Color] = &[
+    BLUE, RED, GREEN, BROWN, PURPLE, GOLD, MAGENTA, BEIGE, PINK, DARKGREEN, LIME, MAROON, ORANGE,
+    DARKBROWN,
+];
 
 fn draw_paths(
     // cpu: &FullCpu,
     paths: &Paths,
+    netlists: &Netlists,
     // grid_limits: &GridLimits,
     grid_to_screen_mapper: &GridToScreenMapper,
 ) {
-    pub const PATH_COLORS: [Color; 7] = [BLUE, RED, GREEN, BROWN, PURPLE, GOLD, MAGENTA];
     //
     // draw_path_grid(
     //     grid_to_screen_mapper,
@@ -285,9 +323,10 @@ fn draw_paths(
     // );
 
     for (ix, (conn, path)) in paths.iter().enumerate() {
+        let netlist_id = netlists.get_for_connection(conn).unwrap();
         draw_path(
             path,
-            &PATH_COLORS[ix % PATH_COLORS.len()],
+            &PATH_COLORS[(netlist_id as usize) % PATH_COLORS.len()],
             grid_to_screen_mapper,
         )
     }
@@ -366,6 +405,7 @@ fn build_full_cpu(
             instruction_memory,
             is_done: false,
             connections: Default::default(),
+            netlists: Default::default(),
         }
     };
 

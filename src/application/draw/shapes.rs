@@ -61,7 +61,7 @@ pub fn draw_arc_pos(center: &Pos, radius: f32, limits: (f32, f32), thickness: f3
     let center = center.as_fpos().to_array();
     let sides =
         ((limits.0 - limits.1).abs() * (radius.abs() / 30.0) * 20.0)
-        .used_in(|val| val.clamp_max(64.0) as u8 ) ;
+        .pipe(|val| val.clamp_max(64.0) as u8 ) ;
 
     draw_arc(center[0], center[1], sides, radius,  limits.0, thickness, limits.1, color);
 }

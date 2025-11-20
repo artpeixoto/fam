@@ -3,8 +3,9 @@ use std::{array, iter};
 use std::ops::Not;
 use getset::Getters;
 use itertools::Itertools;
-use wgpu::naga::FastHashSet;
+use wgpu::naga::{FastHashMap, FastHashSet};
 use crate::application::connection::{CpuConnection, CpuConnectionEndpoint};
+use crate::application::grid::connection::ConnectionEndpoint;
 use crate::application::simulation::talu::{TALU_COUNT, TaluAddress, TaluBank, TaluCore, TaluOperation, TaluPortName};
 use crate::application::simulation::controller::{self, Controller, ControllerPortName, TaluConfigWriter};
 use crate::application::simulation::cpu_registers::{CpuRegisterAddress, CpuRegisterBank, CpuRegisterPortName, REGISTER_COUNT};
@@ -14,6 +15,41 @@ use crate::application::simulation::main_memory::MainMemory;
 use crate::{PROGRAM_COUNTER_REGISTER_ADDR, Step};
 use crate::word::Word;
 
+pub type NetlistId = u16;
+
+#[derive(Clone, Default, Debug)]
+pub struct Netlists { 
+    next_netlist_id: NetlistId,
+    netlists: FastHashMap<CpuConnectionEndpoint, NetlistId>  
+}
+
+impl Netlists{
+    
+   pub fn new() -> Self{
+        Netlists{ next_netlist_id: 0, netlists: Default::default() }
+    }
+    pub fn get_for_endpoint(&self, endpoint: &CpuConnectionEndpoint) -> Option<NetlistId>{
+        self.netlists.get(endpoint).cloned()
+    }
+    pub fn get_for_connection(&self, conn: &CpuConnection) -> Option<NetlistId>{
+        self.netlists.get(conn.first()).cloned()
+    }
+    pub fn clear(&mut self){
+        self.netlists.clear();
+        self.next_netlist_id = 0;
+    }
+     pub fn add(&mut self, conn: &CpuConnection){
+        if let Some(&netlist) = self.netlists.get(conn.first()){
+            self.netlists.insert(conn.second().clone(), netlist); 
+        } else if let Some(&netlist) = self.netlists.get(conn.second()){
+            self.netlists.insert(conn.first().clone(), netlist);
+        } else {
+            self.netlists.insert(conn.first().clone(), self.next_netlist_id);
+            self.netlists.insert(conn.second().clone(), self.next_netlist_id);
+            self.next_netlist_id +=1;
+        }
+    }
+}
 
 #[derive(Getters)]
 pub struct Cpu {
@@ -24,7 +60,8 @@ pub struct Cpu {
     pub main_memory         : MainMemory,
     pub is_done             : bool,
     // #[getset(get="pub")]
-    pub connections             : FastHashSet<CpuConnection>
+    pub connections             : FastHashSet<CpuConnection>,
+    pub netlists                : Netlists
 }
 
 impl Cpu {
@@ -55,7 +92,9 @@ impl Cpu {
             .get_read_request()
         {
             self.connections.insert(CpuConnection::new(
-                CpuConnectionEndpoint::Controller(ControllerPortName::MainMemoryReader), 
+                CpuConnectionEndpoint::Controller(
+                    ControllerPortName::ProgramCounterReader
+                ), 
                 CpuConnectionEndpoint::Register(
                     PROGRAM_COUNTER_REGISTER_ADDR, 
                     CpuRegisterPortName::Output
@@ -135,7 +174,9 @@ impl Cpu {
 
         if let Some(write_pc_req) = self.controller.instruction_reader.program_counter_writer.get_write_request(){
             self.connections.insert( CpuConnection::new(
-                CpuConnectionEndpoint::Controller(ControllerPortName::RegisterWriter),
+                CpuConnectionEndpoint::Controller(
+                    ControllerPortName::ProgramCounterWriter
+                ),
                 CpuConnectionEndpoint::Register(
                     PROGRAM_COUNTER_REGISTER_ADDR, 
                     CpuRegisterPortName::Input
@@ -144,6 +185,12 @@ impl Cpu {
 
             write_pc_req.satisfy(&mut self.register_bank);
         }
+
+        self.netlists.clear();
+        for conn in self.connections.iter(){
+            self.netlists.add(conn)
+        }
+
         return !self.is_done ;
     }
 }

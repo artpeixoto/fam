@@ -13,6 +13,7 @@ use crate::application::grid::controller::ControllerGridDefns;
 use crate::application::grid::grid_limits::GridLimits;
 use crate::application::grid::path::{Path, find_path_a_star};
 use crate::application::simulation::controller::Controller;
+use crate::application::simulation::simulation::Netlists;
 use crate::application::simulation::talu::TaluBank;
 use crate::application::simulation::cpu_registers::CpuRegisterBank;
 
@@ -56,8 +57,9 @@ impl CpuGridData {
         self.blocked_points = all_blocked_points;
     }
 
-    pub fn calculate_paths(&mut self, connections: &FastHashSet<CpuConnection>, grid_limits: &GridLimits){
-        self.paths.retain(|k, _v| connections.contains(k));
+    pub fn calculate_paths(&mut self,  connections: &FastHashSet<CpuConnection>,netlists: &Netlists, grid_limits: &GridLimits){
+        self.paths.clear();
+        // self.paths.retain(|k, _v| connections.contains(k));
         let missing_conns = connections.iter().filter(|conn| !self.paths.contains_key(*conn)).cloned().collect_vec();
         for conn in missing_conns{
             let start_pos = self.get_port_grid_data(conn.first()).position;
@@ -67,6 +69,7 @@ impl CpuGridData {
                     &start_pos, &end_pos, 
                     &conn,
                     &self.paths,
+                    netlists,
                     &self.blocked_points,
                     &grid_limits
                 )

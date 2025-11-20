@@ -16,11 +16,6 @@ use PortSignalDirection::{Input, Output};
 use SignalType::Data;
 use crate::application::simulation::cpu_registers::{CpuRegisterActReader, CpuRegisterActWriter, CpuRegisterDataReader, CpuRegisterDataWriter, CpuRegisterReadRequest, CpuRegisterWriteRequest};
 
-#[derive(Clone, Copy, Eq, PartialEq, Debug, Hash)]
-pub enum TaluCoreState {
-    Normal,
-    Waiting,
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, PartialOrd, Ord)]
 pub enum TaluPortName {
@@ -51,11 +46,11 @@ impl PortName for TaluPortName {
         match self {
             DataIn0 => "di0",
             DataIn1 => "di1",
-            ActivationIn => "act_i",
+            ActivationIn => "ai",
             DataOut0 => "do0",
             DataOut1 => "do1",
-            ActivationOut => "act_o",
-            SetupIn => "setup",
+            ActivationOut => "ao",
+            SetupIn => "cfg",
         }
     }
 }
@@ -85,8 +80,17 @@ impl PortDataContainer<TaluPortName, PortDefns> for TaluPortsDefns {
     }
 }
 
+#[derive(Clone, PartialEq, Eq)]
+pub enum TaluState{
+    Closing,
+    JustProcessed,
+    Done
+}
+
+
 pub struct TaluCore {
-    pub addr: usize,
+    pub addr            : usize,
+    pub state           : TaluState,
     pub operation       : TaluOperation,
     pub old_operation   : TaluOperation,
     pub main_memory     : MainMemoryIo,
@@ -136,6 +140,7 @@ impl TaluCore {
     }
     pub fn new(talu_addr: usize, main_memory: &MainMemory) -> Self {
         TaluCore {
+            state               : TaluState::Closing,
             addr                : talu_addr,
             main_memory         : main_memory.get_io(),
             operation           : TaluOperation::NoOp,
@@ -198,6 +203,7 @@ impl TaluCore {
     pub fn set_new_operation(&mut self, new_operation: TaluOperation){
         self.old_operation = self.operation.clone();
         self.operation = new_operation.clone();
+        self.state = TaluState::Done;
 
         let ports_config = new_operation.get_ports_config();
         self.data_input_0.set_connection(ports_config.data_input_0);
@@ -217,10 +223,22 @@ impl TaluCore {
     pub fn execute(&mut self) {
         let op = self.operation;
         match &op {
-            TaluOperation::Mov { activation_input, value_input, data_output, activation_output } => {
-
-            }
             TaluOperation::NoOp => {}
+            TaluOperation::Mov {..} => {
+                if self.activation_input.read().unwrap(){
+                    let in_0 = self.data_input_0.read().unwrap();
+                    self.data_output_0.write(in_0);
+                    self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
+                } else {
+                    if self.state == TaluState::JustProcessed{
+                        self.activation_output.write(false);
+                        self.state = TaluState::Closing;
+                    }  else {
+                        self.activation_output.clear();
+                    }
+                }
+            }
             TaluOperation::Cmp { op, .. } => {
                 if self.activation_input.read().unwrap() {
                     let in_0 = self.data_input_0.read().unwrap();
@@ -234,50 +252,32 @@ impl TaluCore {
                         CmpOp::NotEq => in_0 != in_1,
                     };
                     self.data_output_0.write(res.to_word());
-                    self.activation_output.write(true)
+                    self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false)
+                    if (self.state == TaluState::JustProcessed){
+                        self.activation_output.write(false);
+                        self.state = TaluState::Closing;
+                    } else {
+                        self.activation_output.clear();
+                    }
                 }
             }
-            // TaluOperation::Mov {
-            //     activation_input,
-            //     ..
-            //     // address_input,
-            //     // data_output,
-            //     // activation_output
-            // } => {
-            //     if self.activation_input.read(){
-            //         let in_addr = match address_input{
-            //             MovInput::Source(source) => *source,
-            //             // MovInput::SourceAddr(src_addr) => {
-            //             //     *self.data_input_1.read() as usize
-            //             // }
-            //         };
-            //         // let res = self.data_input_0.read(in_addr);
-            //
-            //         self.data_output_0.write(*res);
-            //
-            //         activation_output.map(
-            //             |addr| self.activation_output.write(true, addr)
-            //         );
-            //     } else {
-            //         activation_output.map(
-            //             |addr| self.activation_output.write(false, addr)
-            //         );
-            //     }
-            // }
-            TaluOperation::Not {
-                activation_input,
-                data_input,
-                data_output,
-                activation_output,
+           TaluOperation::Not {
+                ..
             } => {
                 if self.activation_input.read().unwrap() {
                     let inp = self.data_input_0.read().unwrap();
                     self.data_output_0.write(!inp);
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(true);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::And {
@@ -290,8 +290,15 @@ impl TaluCore {
                     let res = inp_0 & inp_1;
                     self.data_output_0.write(res);
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(true);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::Or {
@@ -304,8 +311,15 @@ impl TaluCore {
                     let res = inp_0 | inp_1;
                     self.data_output_0.write(res);
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::Xor {
@@ -318,8 +332,14 @@ impl TaluCore {
                     let res = inp_0 ^ inp_1;
                     self.data_output_0.write(res);
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done; self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::ShiftLeft {
@@ -333,8 +353,15 @@ impl TaluCore {
                     self.data_output_0.write(res);
 
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::ShiftRight {
@@ -348,8 +375,15 @@ impl TaluCore {
                     self.data_output_0.write(res);
 
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::SelectPart { .. } => {
@@ -365,8 +399,15 @@ impl TaluCore {
                     self.data_output_0.write(first_word);
                     self.data_output_1.write(overflow as i32 );
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::Sub {
@@ -381,8 +422,15 @@ impl TaluCore {
                     self.data_output_1.write(overflow as i32);
 
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::Mul {
@@ -400,6 +448,7 @@ impl TaluCore {
                             .write(unsafe { transmute(first_word_res) },);
                         self.data_output_1
                             .write(second_word_res);
+                    self.state = TaluState::JustProcessed;
                     } else {
                         self.data_output_0
                             .write((inp_0) * (inp_1), );
@@ -407,7 +456,13 @@ impl TaluCore {
 
                     self.activation_output.write(true);
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::Div {
@@ -431,9 +486,16 @@ impl TaluCore {
                         }
                     }
 
+                    self.state = TaluState::JustProcessed;
                     self.activation_output.write(true);
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::Rem {
@@ -458,8 +520,15 @@ impl TaluCore {
                     }
 
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::Neg {
@@ -470,8 +539,15 @@ impl TaluCore {
                     self.data_output_0.write(res);
 
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::ReadFromMem {
@@ -481,22 +557,35 @@ impl TaluCore {
                     let addr = self.data_input_0.read().unwrap();
                     let res = self.main_memory.read(addr as usize);
                     self.data_output_0.write(res);
-
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::WriteToMem {
                 ..
             } => {
                 if self.activation_input.read().unwrap() {
-                    let addr = self.data_input_0.read().unwrap();
-                    let data = self.data_input_1.read().unwrap();
+                    let data = self.data_input_0.read().unwrap();
+                    let addr = self.data_input_1.read().unwrap();
                     self.main_memory.write(addr as usize, data);
                     self.activation_output.write(true);
+                    self.state = TaluState::JustProcessed;
                 } else {
-                    self.activation_output.write(false);
+                    if self.state == TaluState::JustProcessed{
+                        self.state = TaluState::Closing;
+                        self.activation_output.write(false);
+                    } else {
+                        self.state = TaluState::Done;
+                        self.activation_output.clear();
+                    }
                 }
             }
             TaluOperation::Latch {

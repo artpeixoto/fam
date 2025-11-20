@@ -6,12 +6,13 @@ use crate::word::{Word};
 pub const MAIN_MEMORY_LEN: usize = 1024;
 
 type MainMemoryInner = Arc<RwLock<Vec<Word>>>;
-pub struct MainMemory(MainMemoryInner);
+pub struct MainMemory(pub MainMemoryInner);
 
 impl MainMemory{
     pub fn new(content: Vec<Word>) -> Self{
         MainMemory(Arc::new(RwLock::new(content)))
     }
+
 }
 
 pub struct MainMemoryIo(MainMemoryInner);

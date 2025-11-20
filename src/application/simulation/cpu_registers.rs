@@ -16,12 +16,13 @@ pub type CpuRegisterBank = ComponentBank<CpuRegister, REGISTER_COUNT>;
 impl CpuRegisterBank {
     pub fn new() -> Self{
         let registers = (0..REGISTER_COUNT).into_iter().map(|address|CpuRegister::new(address))
-            .collect_array().unwrap().used_in(Box::new);
+            .collect_array().unwrap().pipe(Box::new);
         CpuRegisterBank {
            components: registers
         }
     }
 }
+
 pub struct CpuRegister{
     pub address : CpuRegisterAddress,
     pub value   : Word,
@@ -202,11 +203,16 @@ impl CpuRegisterDataWriter{
         } else {
         }
     }
+    pub fn clear(&mut self){
+        if let CpuRegisterDataWriter::Connected { target, value } = self{
+            *value = None;
+        }
+    }
     pub fn get_write_request(&self) -> Option<CpuRegisterWriteRequest>{
         if let CpuRegisterDataWriter::Connected {
-                target,
-                value: inner_value,
-            } = self
+            target,
+            value: inner_value,
+        } = self
 
         && let Some(val) = inner_value
         {
@@ -285,20 +291,30 @@ impl CpuRegisterActWriter {
             inner   : CpuRegisterDataWriter::Deactivated
         }
     }
+    #[inline]
     pub fn set_connection(&mut self, target: Option<CpuRegisterAddress>){
         self.inner.set_connection(target);
     }
+    #[inline]
     pub fn get_write_request(&self) -> Option<CpuRegisterWriteRequest>{
         self.inner.get_write_request()
     }
+    #[inline]
     pub fn deactivate(&mut self){
         self.inner.deactivate();
     }
+    #[inline]
     pub fn is_active(&self) -> bool{
         self.inner.is_active()
     }
+    #[inline]
+    pub fn clear(&mut self) {
+        self.inner.clear();
+    }
+    #[inline]
     pub fn write(&mut self,  value: bool) {
         self.inner.write(value.to_word())
     }
+    
 }
 

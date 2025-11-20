@@ -17,6 +17,7 @@ pub struct ConnectionEndpointPair(
     pub ConnectionEndpoint,
     pub ConnectionEndpoint,
 );
+
 impl ConnectionEndpointPair{
     pub fn new(p0: ConnectionEndpoint, p1: ConnectionEndpoint) -> Self{
         let (first, second) = {

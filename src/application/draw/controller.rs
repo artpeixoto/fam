@@ -18,7 +18,7 @@ use crate::application::grid::rect::{grid_rect, GridRect};
 use crate::application::simulation::component_bank::ComponentBank;
 use crate::application::simulation::controller::{Controller, ControllerExecutionState, ControllerPortName};
 use crate::application::simulation::instruction::HorizontalDir;
-use crate::application::simulation::talu::TaluCoreState;
+use crate::application::simulation::talu::TaluState;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ControllerDrawingDefns{
@@ -64,42 +64,42 @@ impl DrawableComponent for Controller{
 		let ports_data = ControllerPortsData::from_iter([
 			(	ControllerPortName::ProgramCounterReader,
 				PortDefns{
-					active	   	: self.instruction_reader.program_counter_reader.is_active(),
+					active	   	: true,
 					signal_dir	: PortSignalDirection::Input,
 					signal_type	: crate::application::draw::port::SignalType::Data,	
 				}
 			)	,
 			(	ControllerPortName::ProgramCounterWriter,
 				PortDefns{
-					active	   	: self.instruction_reader.program_counter_writer.is_active(),
+					active	   	: true,
 					signal_dir	: PortSignalDirection::Output,
 					signal_type	: SignalType::Data,	
 				}
 			),
 			(	ControllerPortName::RegisterReader,
 				PortDefns{
-					active	   	: self.cpu_registers_reader.is_active(),
+					active	   	: true,
 					signal_dir	: PortSignalDirection::Input,
 					signal_type	: SignalType::Data,	
 				}
 			),
 			(	ControllerPortName::RegisterWriter,
 				PortDefns{
-					active	   	: self.cpu_registers_writer.is_active(),
+					active	   	: true,
 					signal_dir	: PortSignalDirection::Output,
 					signal_type	: SignalType::Data,
 				}
 			),
 			(	ControllerPortName::TaluConfigWriter,
 				PortDefns{
-					active	   	: self.talu_config_writer.is_active(),
+					active	   	: true,
 					signal_dir	: PortSignalDirection::Output,
 					signal_type	: SignalType::TaluSetup,	
 				}
 			),
 			(	ControllerPortName::MainMemoryReader,
 				PortDefns{
-					active	   	: matches!(self.state, ControllerExecutionState::Running),
+					active	   	: true,
 					signal_dir	: PortSignalDirection::Input,
 					signal_type	: SignalType::Data
 				}

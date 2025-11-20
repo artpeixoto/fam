@@ -1,11 +1,11 @@
-use crate::application::simulation::talu::{CmpOp, TALU_COUNT, TaluAddress};
+use crate::application::simulation::talu::{CmpOp, TALU_COUNT, TaluAddress, TaluState};
 use crate::application::direction::Direction;
 use crate::application::direction::Axis::Vertical;
 use crate::application::draw::component_bank::{ComponentBankDrawingDefn, ComponentBankGridData};
 use crate::application::draw::grid_to_screen::GridToScreenMapper;
 use crate::application::draw::port::{draw_port, PortDrawingDefns, PortGridDefns};
 use crate::application::draw::pos::{dist, pos, size, ScreenUnit, Size};
-use crate::application::draw::shapes::draw_rectangle_pos;
+use crate::application::draw::shapes::{draw_circle_pos, draw_rectangle_pos};
 use crate::application::draw::text::{draw_text_line_tiny, draw_title};
 use crate::application::grid::talu::{TaluGridDefns, TaluPortsGridDefns};
 use crate::application::grid::blocked_point::BlockedPoints;
@@ -15,7 +15,7 @@ use crate::application::grid::rect::grid_rect;
 use crate::application::simulation::talu::{TaluCore, TaluOperation, TaluPortName, TaluPortsDefns};
 use crate::tools::used_in::UsedIn;
 use itertools::Itertools;
-use macroquad::color::{BLACK, LIGHTGRAY, WHITE};
+use macroquad::color::{BLACK, GRAY, GREEN, LIGHTGRAY, WHITE, YELLOW};
 use std::marker::PhantomData;
 use std::ops::Index;
 
@@ -216,6 +216,17 @@ impl DrawableComponent for TaluCore {
 
         { // status text
             cursor.go(dist(2, 2));
+            let radius = 4;
+            let circle_color = match self.state{
+                TaluState::JustProcessed => GREEN,
+                TaluState::Closing => YELLOW,
+                TaluState::Done => GRAY,
+            };
+            let center =cursor.top_left() +  Direction::Right * radius + Direction::Down * radius ; 
+            draw_circle_pos(
+                &center , 
+                radius as f32, circle_color
+            );
         }
 
         { // draw operation text
