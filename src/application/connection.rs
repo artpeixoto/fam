@@ -10,6 +10,7 @@ pub enum CpuConnectionEndpoint{
     MainMemory,
 }
 
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, getset::Getters)]
 pub struct CpuConnection{ 
     #[getset(get="pub")]

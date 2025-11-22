@@ -23,8 +23,13 @@ pub struct GridMovement {
     pub destination_point   : GridPos
 }
 
-impl GridPos {
-    pub fn all_moves(&self) -> Vec<GridMovement> {
+pub trait GridPosMovementExt{
+    fn all_moves(&self) -> Vec<GridMovement>;
+    fn go(self, dir: Direction) -> GridMovement;
+}
+
+impl GridPosMovementExt for GridPos {
+    fn all_moves(&self) -> Vec<GridMovement> {
         Direction
         ::all_directions()
         .filter_map(|dir|
@@ -39,13 +44,13 @@ impl GridPos {
         .collect()
     }
 
-    pub const fn go(self, dir: Direction) -> GridMovement {
+    fn go(self, dir: Direction) -> GridMovement {
         let (line, destination) = match dir {
             Up => {
                 let target = grid_pos(self.x, self.y - 1);
                 let line = GridLine{
                     index: target,
-                    hor_or_ver: Vertical,
+                    axis: Vertical,
                 };
                 (line, target)
             }
@@ -53,7 +58,7 @@ impl GridPos {
                 let target = grid_pos(self.x + 1, self.y );
                 let line = GridLine{
                     index: self,
-                    hor_or_ver: Horizontal,
+                    axis: Horizontal,
                 };
                 (line, target)
             }
@@ -61,7 +66,7 @@ impl GridPos {
                 let target = grid_pos(self.x, self.y + 1 );
                 let line = GridLine{
                     index: self,
-                    hor_or_ver: Vertical,
+                    axis: Vertical,
                 };
                 (line, target)
             }
@@ -69,7 +74,7 @@ impl GridPos {
                 let target = grid_pos(self.x  - 1, self.y );
                 let line = GridLine{
                     index: target,
-                    hor_or_ver: Horizontal,
+                    axis: Horizontal,
                 };
                 (line, target)
             }

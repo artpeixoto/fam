@@ -23,11 +23,3 @@ impl<Data, const COUNT: usize> RegisterBank<Data, { COUNT }> {
         Self { registers }
     }
 }
-
-
-pub enum ConnectionTarget{
-        CpuRegisterAddress,
-    CpuRegister(
-    )
-}
-

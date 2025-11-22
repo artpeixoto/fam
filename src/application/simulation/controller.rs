@@ -4,7 +4,7 @@ use crate::application::simulation::cpu_registers::{CpuRegisterDataReader, CpuRe
 use crate::application::simulation::instruction::Instruction;
 use crate::application::simulation::instruction_reader::IncrementCmd::{GoTo, Increment, NoIncrement};
 use crate::application::simulation::instruction_reader::{InstructionMemory, InstructionReader};
-use crate::word::ToBool;
+use crate::word::ToActivation;
 use std::fmt::Debug;
 
 #[derive( PartialEq, Eq, Copy, Clone, Debug, )]
@@ -103,8 +103,8 @@ impl Controller{
 				}
 			}
 			ControllerExecutionState::WaitingForActivation => {
-				let is_activated = self.cpu_registers_reader.read().unwrap().to_bool();
-				if is_activated {
+				let is_activated = self.cpu_registers_reader.read().unwrap().to_activation();
+				if is_activated.into() {
 					self.instruction_reader.set_increment_cmd(Increment);
 					self.state =  ControllerExecutionState::ReadingInstruction;
 				} else {

@@ -21,4 +21,3 @@ impl<Data> Register<Data>{
 		&self.value
 	}
 }
-

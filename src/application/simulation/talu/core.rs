@@ -9,7 +9,7 @@ use crate::application::simulation::talu::TaluPortName::{
 };
 use crate::application::simulation::main_memory::{MainMemory, MainMemoryIo};
 use crate::application::simulation::memory_primitives::register::Register;
-use crate::word::{ToBool, ToWord, Word};
+use crate::word::{ToActivation, ToWord, Word};
 use std::mem::transmute;
 use std::ops::Index;
 use PortSignalDirection::{Input, Output};
@@ -225,7 +225,7 @@ impl TaluCore {
         match &op {
             TaluOperation::NoOp => {}
             TaluOperation::Mov {..} => {
-                if self.activation_input.read().unwrap(){
+                if self.activation_input.read().unwrap().into() {
                     let in_0 = self.data_input_0.read().unwrap();
                     self.data_output_0.write(in_0);
                     self.activation_output.write(true);
@@ -240,7 +240,7 @@ impl TaluCore {
                 }
             }
             TaluOperation::Cmp { op, .. } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let in_0 = self.data_input_0.read().unwrap();
                     let in_1 = self.data_input_1.read().unwrap();
                     let res = match  op{
@@ -266,7 +266,7 @@ impl TaluCore {
            TaluOperation::Not {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp = self.data_input_0.read().unwrap();
                     self.data_output_0.write(!inp);
                     self.activation_output.write(true);
@@ -283,7 +283,7 @@ impl TaluCore {
             TaluOperation::And {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp_0 = self.data_input_0.read().unwrap();
                     let inp_1 = self.data_input_1.read().unwrap();
 
@@ -304,7 +304,7 @@ impl TaluCore {
             TaluOperation::Or {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp_0 = self.data_input_0.read().unwrap();
                     let inp_1 = self.data_input_1.read().unwrap();
 
@@ -325,7 +325,7 @@ impl TaluCore {
             TaluOperation::Xor {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp_0 = self.data_input_0.read().unwrap();
                     let inp_1 = self.data_input_1.read().unwrap();
 
@@ -345,7 +345,7 @@ impl TaluCore {
             TaluOperation::ShiftLeft {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp_0 = self.data_input_0.read().unwrap();
                     let inp_1 = self.data_input_1.read().unwrap();
 
@@ -367,7 +367,7 @@ impl TaluCore {
             TaluOperation::ShiftRight {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp_0 = self.data_input_0.read().unwrap();
                     let inp_1 = self.data_input_1.read().unwrap();
 
@@ -391,7 +391,7 @@ impl TaluCore {
             }
             TaluOperation::Add { ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp_0 = self.data_input_0.read().unwrap();
                     let inp_1 = self.data_input_1.read().unwrap();
 
@@ -413,7 +413,7 @@ impl TaluCore {
             TaluOperation::Sub {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp_0 = self.data_input_0.read().unwrap();
                     let inp_1 = self.data_input_1.read().unwrap();
 
@@ -437,7 +437,7 @@ impl TaluCore {
                 second_word_output,
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let inp_0 = self.data_input_0.read().unwrap();
                     let inp_1 = self.data_input_1.read().unwrap();
 
@@ -469,7 +469,7 @@ impl TaluCore {
                 div_by_zero_flag_output,
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let dividend = self.data_input_0.read().unwrap();
                     let divisor = self.data_input_1.read().unwrap();
 
@@ -502,7 +502,7 @@ impl TaluCore {
                 div_by_zero_flag_output,
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap() .into(){
                     let dividend = self.data_input_0.read().unwrap();
                     let divisor = self.data_input_1.read().unwrap();
 
@@ -534,7 +534,7 @@ impl TaluCore {
             TaluOperation::Neg {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap() .into(){
                     let res = -self.data_input_0.read().unwrap();
                     self.data_output_0.write(res);
 
@@ -553,7 +553,7 @@ impl TaluCore {
             TaluOperation::ReadFromMem {
                 ..
             } => {
-                if self.activation_input.read() .unwrap(){
+                if self.activation_input.read() .unwrap().into(){
                     let addr = self.data_input_0.read().unwrap();
                     let res = self.main_memory.read(addr as usize);
                     self.data_output_0.write(res);
@@ -572,7 +572,7 @@ impl TaluCore {
             TaluOperation::WriteToMem {
                 ..
             } => {
-                if self.activation_input.read().unwrap() {
+                if self.activation_input.read().unwrap().into() {
                     let data = self.data_input_0.read().unwrap();
                     let addr = self.data_input_1.read().unwrap();
                     self.main_memory.write(addr as usize, data);
@@ -591,10 +591,10 @@ impl TaluCore {
             TaluOperation::Latch {
                 ..
             } => {
-                let hold_input = self.data_input_1.read().unwrap().to_bool();
-                let previous_hold = self.inner_memory_1.to_bool();
+                let hold_input = self.data_input_1.read().unwrap().to_activation().into();
+                let previous_hold: bool = self.inner_memory_1.to_activation().into();
                 if hold_input {
-                    if self.activation_input.read().unwrap() {
+                    if self.activation_input.read().unwrap().into() {
                         if !previous_hold {
                             let current_data = self.data_input_0.read().unwrap();
                             self.inner_memory_0 = current_data;

@@ -76,7 +76,7 @@ impl Cpu {
             self.connections.insert(CpuConnection::new(
                 CpuConnectionEndpoint::Controller(ControllerPortName::RegisterReader), 
                 CpuConnectionEndpoint::Register(
-                    controller_read_req.addr(), 
+                    *controller_read_req.addr(), 
                     CpuRegisterPortName::Output
                 )
             ));
@@ -133,10 +133,10 @@ impl Cpu {
         // give talus the requested data
         for ( talu_addr, talu ) in self.talu_bank.components.iter_mut().enumerate(){
             let mut reqs = talu.collect_read_requests();
-            for (port, req) in &mut reqs{
+            for (port, req) in reqs{
                 self.connections.insert( CpuConnection::new(
-                    CpuConnectionEndpoint::Talu(talu_addr, *port),
-                    CpuConnectionEndpoint::Register(req.addr(), CpuRegisterPortName::Output)
+                    CpuConnectionEndpoint::Talu(talu_addr, port),
+                    CpuConnectionEndpoint::Register(*req.addr(), CpuRegisterPortName::Output)
                 ));
                 req.satisfy(&self.register_bank);
             }
@@ -152,11 +152,11 @@ impl Cpu {
         }
 
         for ( talu_addr, talu ) in self.talu_bank.components.iter_mut().enumerate(){
-            let mut reqs = talu.collect_write_requests();
-            for (talu_port, req) in &mut reqs{
+            let reqs = talu.collect_write_requests();
+            for (talu_port, req) in reqs{
                 self.connections.insert( CpuConnection::new(
-                    CpuConnectionEndpoint::Talu(talu_addr, *talu_port),
-                    CpuConnectionEndpoint::Register(req.addr(), CpuRegisterPortName::Input)
+                    CpuConnectionEndpoint::Talu(talu_addr, talu_port),
+                    CpuConnectionEndpoint::Register(*req.addr(), CpuRegisterPortName::Input)
                 ));
                 req.satisfy(&mut self.register_bank);
             }
@@ -166,7 +166,7 @@ impl Cpu {
         if let Some(req) = self.controller.cpu_registers_writer.get_write_request(){
             self.connections.insert( CpuConnection::new(
                 CpuConnectionEndpoint::Controller(ControllerPortName::RegisterWriter),
-                CpuConnectionEndpoint::Register(req.addr(), CpuRegisterPortName::Input)
+                CpuConnectionEndpoint::Register(*req.addr(), CpuRegisterPortName::Input)
             ));
 
             req.satisfy(&mut self.register_bank);

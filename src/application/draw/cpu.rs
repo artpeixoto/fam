@@ -8,7 +8,7 @@ use crate::application::draw::port::PortDrawingDefns;
 pub struct CpuDrawingData{
     pub port                    : PortDrawingDefns,
     pub register_bank           : CpuRegisterBankDrawingDefns,
-    pub talu_bank                : TaluBankDrawingDefns,
+    pub talu_bank               : TaluBankDrawingDefns,
     pub instruction_memory      : InstructionMemoryDrawingDefns,
     pub controller              : ControllerDrawingDefns,
 }

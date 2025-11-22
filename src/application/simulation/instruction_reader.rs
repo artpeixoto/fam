@@ -38,7 +38,7 @@ impl InstructionReader{
 	) -> InstructionReader {
 		Self {
 			instruction_memory		: instruction_memory.0.clone(),
-			program_counter_reader	: CpuRegisterDataReader::Connected {source:
+			program_counter_reader	: CpuRegisterDataReader::Active {source:
 			PROGRAM_COUNTER_REGISTER_ADDR, value: None},
 			program_counter_writer	: CpuRegisterDataWriter::Deactivated,
 			increment_cmd			: IncrementCmd::Increment,

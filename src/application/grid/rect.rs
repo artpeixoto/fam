@@ -5,6 +5,7 @@ pub struct GridRect{
     pub top_left    : GridPos,
     pub size        : GridSize,
 }
+
 pub const fn grid_rect(top_left: GridPos, size : GridSize) -> GridRect {
     GridRect::new(top_left, size)
 }

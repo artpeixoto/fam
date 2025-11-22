@@ -61,6 +61,7 @@ pub fn draw_port(
     port_drawing_info : &PortDrawingDefns,
     grid_to_screen    : &GridToScreenMapper,
 ) {
+    
     let color = {
         let port_color_index = if port.active{
             PortColorIndex::Active(

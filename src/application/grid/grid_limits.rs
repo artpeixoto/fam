@@ -35,7 +35,7 @@ impl GridLimits {
         let max_x = (self.0.x - 1) as i16;
         let max_y = (self.0.y - 1) as i16;
         
-        let  in_max_limits = match line.hor_or_ver{
+        let  in_max_limits = match line.axis{
             Horizontal => {
                 line.index.x < max_x && line.index.y <= max_y
             }

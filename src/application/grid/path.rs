@@ -9,7 +9,7 @@ use crate::application::connection::CpuConnection;
 use crate::application::direction::Direction;
 use crate::application::grid::blocked_point::BlockedPoints;
 use crate::application::grid::grid_limits::GridLimits;
-use crate::application::grid::movement::GridMovement;
+use crate::application::grid::movement::{GridMovement, GridPosMovementExt};
 use crate::application::grid::pos::GridPos;
 use crate::application::simulation::simulation::Netlists;
 use crate::tools::used_in::With;
@@ -90,7 +90,7 @@ pub fn find_path_a_star(
             if !line_is_available {cost += 1000}
 
             let point_is_available = !points_used_by_other_paths.contains(&movement.destination_point);
-            if !point_is_available {cost += 10}
+            if !point_is_available {cost += 1}
 
 
             let point_has_not_been_visited = visited_points.contains(&movement.destination_point).not();

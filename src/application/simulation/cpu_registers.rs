@@ -1,13 +1,13 @@
 use std::ops::Index;
 use getset::Getters;
 use itertools::Itertools;
-use crate::word::Word;
+use crate::word::{Activation, Word};
 use crate::application::draw::port::{PortDefns, PortSignalDirection, SignalType};
 use crate::application::grid::component::{PortDataContainer, PortName};
 use crate::application::simulation::component_bank::ComponentBank;
-use crate::application::simulation::cpu_registers::CpuRegisterDataReader::{Connected, Deactivated};
+use crate::application::simulation::cpu_registers::CpuRegisterDataReader::{Active, Deactivated};
 use crate::tools::used_in::UsedIn;
-use crate::word::{ToBool, ToWord};
+use crate::word::{ToActivation, ToWord};
 
 pub type CpuRegisterAddress = usize;
 pub const REGISTER_COUNT: CpuRegisterAddress = 64;
@@ -118,7 +118,7 @@ impl CpuRegisterPortName{
 
 pub enum CpuRegisterDataReader {
     Deactivated,
-    Connected {
+    Active {
         source: CpuRegisterAddress,
         value : Option<Word>,
     }
@@ -132,11 +132,11 @@ impl CpuRegisterDataReader {
         *self = Deactivated;
     }
     pub fn is_active(&self) -> bool{
-        matches!(self, Connected {..})
+        matches!(self, Active {..})
     }
     pub fn set_connection(&mut self, target: Option<CpuRegisterAddress>){
         if let Some(target) = target {
-            *self = Connected {
+            *self = Active {
                 source: target,
                 value: None,
             };
@@ -144,8 +144,9 @@ impl CpuRegisterDataReader {
             *self = Deactivated;
         }
     }
+
     pub fn read(&self) -> Option<Word> {
-        if let Connected{ source:_, value} = self
+        if let Active{ source:_, value} = self
         && let Some(val) = value
         {
             Some(*val)
@@ -153,11 +154,11 @@ impl CpuRegisterDataReader {
             None
         }
     }
-    pub fn get_read_request(&mut self) -> Option<CpuRegisterReadRequest> {
-        if let Connected{ source:source, value} = self{
+    pub fn get_read_request(&mut self) -> Option<CpuRegisterReadRequest<'_>> {
+        if let Active{ source, value} = self{
             Some(CpuRegisterReadRequest{
-                source_reg_addr: *source,
-                target: value,
+                register_addr: source,
+                value_cell: value,
             })
         } else {
             None
@@ -208,47 +209,49 @@ impl CpuRegisterDataWriter{
             *value = None;
         }
     }
+
     pub fn get_write_request(&self) -> Option<CpuRegisterWriteRequest>{
         if let CpuRegisterDataWriter::Connected {
             target,
             value: inner_value,
         } = self
-
         && let Some(val) = inner_value
         {
             Some(CpuRegisterWriteRequest{
-                target: *target,
-                value : *val,
+                register_addr: target,
+                value : val,
             })
         } else {
             None
         }
     }
 }
-pub struct CpuRegisterWriteRequest{
-    target       : CpuRegisterAddress,
-    value        : Word,
+
+pub struct CpuRegisterWriteRequest<'a>{
+    register_addr: &'a CpuRegisterAddress,
+    value        : &'a Word,
 }
 
-impl CpuRegisterWriteRequest {
-    pub fn satisfy(&self, register_bank: &mut CpuRegisterBank) {
-         register_bank.components[self.target].write(self.value);
+impl<'a> CpuRegisterWriteRequest<'a> {
+    pub fn satisfy(self, register_bank: &mut CpuRegisterBank) {
+         register_bank.components[*self.register_addr].write(*self.value);
     }
-    pub fn addr(&self) -> CpuRegisterAddress{
-        self.target
+
+    pub fn addr(&self) -> &CpuRegisterAddress{
+        self.register_addr
     }
 }
-#[derive(Getters)]
 pub struct CpuRegisterReadRequest<'a>{
-    source_reg_addr : CpuRegisterAddress,
-    target : &'a mut Option<Word>
+    register_addr : &'a CpuRegisterAddress,
+    value_cell    : &'a mut Option<Word>
 }
+
 impl CpuRegisterReadRequest<'_>{
-    pub fn addr(&self) -> CpuRegisterAddress{
-        self.source_reg_addr
+    pub fn addr(&self) -> &CpuRegisterAddress{
+        self.register_addr
     }
-    pub fn satisfy(&mut self, register_bank: &CpuRegisterBank)  {
-        *self.target = Some( register_bank.components[self.source_reg_addr].value)
+    pub fn satisfy(self, register_bank: &CpuRegisterBank)  {
+        *self.value_cell = Some( register_bank.components[*self.register_addr].value)
     }
 }
 
@@ -274,8 +277,8 @@ impl CpuRegisterActReader{
     pub fn get_read_request<'a>(&'a mut self) ->  Option<CpuRegisterReadRequest<'a>>{
        self.inner.get_read_request() 
     }
-    pub fn read(&self) -> Option<bool>{
-        self.inner.read().map(|val| val.to_bool())
+    pub fn read(&self) -> Option<Activation>{
+        self.inner.read().map(|val| val.to_activation())
     }
 }
 
