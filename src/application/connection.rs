@@ -1,5 +1,5 @@
 use std::cmp::{max, min};
-use crate::application::{draw::{talu::TaluBankGridDefns, port::PortGridDefns}, grid::component::{ComponentGridData, PortDataContainer}, simulation::{talu::{TaluAddress, TaluBank, TaluPortName}, controller::ControllerPortName, cpu_registers::{CpuRegisterAddress, CpuRegisterPortName}, simulation::Cpu}};
+use crate::application::{draw::{talu::TaluBankGridDefns, port::PortGridDefns}, grid::component::{ComponentCalculatedDefns, PortDataContainer}, simulation::{talu::{TaluAddress, TaluBank, TaluPortName}, controller::ControllerPortName, cpu_registers::{CpuRegisterAddress, CpuRegisterPortName}, simulation::Cpu}};
 
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone)]

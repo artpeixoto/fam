@@ -4,10 +4,10 @@ use wgpu::naga::{FastHashMap, FastHashSet};
 use crate::application::connection::{CpuConnection, CpuConnectionEndpoint};
 use crate::application::draw::port::PortGridDefns;
 use crate::application::draw::talu::TaluBankGridDefns;
-use crate::application::draw::cpu_register::CpuRegisterBankGridDefns;
+use crate::application::draw::cpu_register::CpuRegisterBankGridData;
 use crate::application::draw::instruction_memory::InstructionMemoryGridDefns;
 use crate::application::grid::blocked_point::BlockedPoints;
-use crate::application::grid::component::{ComponentGridData, PortDataContainer};
+use crate::application::grid::component::{ComponentCalculatedDefns, PortDataContainer};
 use crate::application::grid::connection::{ConnectionEndpoint, ConnectionEndpointPair};
 use crate::application::grid::controller::ControllerGridDefns;
 use crate::application::grid::grid_limits::GridLimits;
@@ -19,12 +19,11 @@ use crate::application::simulation::cpu_registers::CpuRegisterBank;
 
 pub struct CpuGridData{
     pub talu_bank            : TaluBankGridDefns,
-    pub register_bank        : CpuRegisterBankGridDefns,
+    pub register_bank        : CpuRegisterBankGridData,
     pub controller           : ControllerGridDefns,
     pub instruction_memory   : InstructionMemoryGridDefns,
     pub blocked_points       : BlockedPoints,
     pub paths                : FastHashMap<CpuConnection, Path> 
-
 }
 
 impl CpuGridData {

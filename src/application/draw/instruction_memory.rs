@@ -1,6 +1,6 @@
 use crate::application::direction::Axis;
 use crate::application::draw::cursor::RectCursor;
-use crate::application::draw::grid_to_screen::GridToScreenMapper;
+use crate::application::draw::grid_to_screen::GridScreenTransformer;
 use crate::application::draw::port::{PortDefns, PortDrawingDefns, PortGridDefns};
 use crate::application::draw::pos::{Dist, Pos, ScreenUnit, Size, *};
 use crate::application::draw::shapes::{draw_line_pos, draw_rectangle_pos};
@@ -9,7 +9,7 @@ use crate::application::draw::text::{
     normal_font,
 };
 use crate::application::grid::blocked_point::BlockedPoints;
-use crate::application::grid::component::{DrawableComponent, PortName, SimpleComponentGridDefns};
+use crate::application::grid::component::{DrawableComponent, PortName, SimpleComponentGridData};
 use crate::application::grid::pos::GridPos;
 use crate::application::grid::rect::grid_rect;
 use crate::application::simulation::instruction_reader::InstructionMemory;
@@ -40,7 +40,7 @@ impl DrawableComponent for InstructionMemory {
     type PortDataContainer = FastHashMap<Never, PortDefns>;
     type PortGridDataContainer = FastHashMap<Never, PortGridDefns>;
 
-    type ComponentCalculatedDefns = SimpleComponentGridDefns<
+    type ComponentCalculatedDefns = SimpleComponentGridData<
         Never,
         FastHashMap<Never, PortDefns>,
         FastHashMap<Never, PortGridDefns>,
@@ -51,13 +51,13 @@ impl DrawableComponent for InstructionMemory {
         grid_position: GridPos,
         drawing_info: &Self::DrawingDefn,
         _port_drawing_info: &PortDrawingDefns,
-        grid_to_screen: &GridToScreenMapper,
+        grid_to_screen: &GridScreenTransformer,
     ) -> Self::ComponentCalculatedDefns {
         let grid_size = grid_to_screen.screen_to_grid_size(drawing_info.size);
         let grid_rect = grid_rect(grid_position, grid_size);
-        let blocked_points = BlockedPoints::new_from_blocked_inner_rect(grid_rect.clone());
+        let blocked_points = BlockedPoints::new_from_blocked_rect(grid_rect.clone());
 
-        SimpleComponentGridDefns {
+        SimpleComponentGridData {
             grid_rect,
             blocked_points,
             ports_data: FastHashMap::default(),
@@ -72,7 +72,7 @@ impl DrawableComponent for InstructionMemory {
         grid_data           : &Self::ComponentCalculatedDefns,
         drawing_data        : &Self::DrawingDefn,
         port_drawing_defns  : &PortDrawingDefns,
-        grid_to_screen      : &GridToScreenMapper,
+        grid_to_screen      : &GridScreenTransformer,
     ) {
         let top_left = grid_to_screen.grid_to_screen_pos(grid_data.grid_rect.top_left);
         let size = grid_to_screen.grid_to_screen_size(grid_data.grid_rect.size);
@@ -81,7 +81,7 @@ impl DrawableComponent for InstructionMemory {
 
         let title_dims = draw_title("Instruction Memory", top_left, 2, BLACK);
 
-        cursor.go(Dist::new(0, title_dims.height as ScreenUnit * 2 + 2));
+        cursor.advance(Dist::new(0, title_dims.height as ScreenUnit * 2 + 2));
         let initial_cursor = cursor.clone();
         {
             let mut current_cell_ix = *drawing_state;
@@ -137,7 +137,7 @@ impl DrawableComponent for InstructionMemory {
                         BLACK,
                     );
                 }
-                cursor.go(dist(0, text_dims.height as i32 + 4));
+                cursor.advance(dist(0, text_dims.height as i32 + 4));
                 current_cell_ix += 1;
             }
         }
@@ -164,7 +164,7 @@ pub struct InstructionMemoryDrawingDefns {
 }
 
 pub type InstructionMemoryGridDefns 
-    =  SimpleComponentGridDefns<
+    =  SimpleComponentGridData<
         Never,
         FastHashMap<Never, PortDefns>,
         FastHashMap<Never, PortGridDefns>,

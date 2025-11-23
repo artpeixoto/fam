@@ -7,15 +7,16 @@ use wgpu::hal::DynCommandEncoder;
 use crate::application::direction::Direction;
 use crate::application::draw::component_bank::{ComponentBankDrawingDefn, ComponentBankPortDataContainer, ComponentBankPortName};
 use crate::application::draw::cursor::RectCursor;
-use crate::application::draw::grid_to_screen::GridToScreenMapper;
+use crate::application::draw::grid_to_screen::GridScreenTransformer;
 use crate::application::draw::port::{draw_port, PortDrawingDefns, PortGridDefns};
 use crate::application::draw::text::{draw_text_line_normal, draw_text_line_tiny, normal_font, tiny_font};
 use crate::application::draw::text::title::draw_title;
+use crate::application::grid;
 use crate::application::grid::cpu_register::{ CpuRegisterPortsGridData};
 use crate::application::grid::pos::{grid_dist, grid_pos, grid_size, GridPos, GridSize};
-use crate::application::draw::pos::{dist, pos, size, Pos, Size};
+use crate::application::draw::pos::{Pos, ScreenUnit, Size, dist, pos, size};
 use crate::application::grid::blocked_point::BlockedPoints;
-use crate::application::grid::component::{SimpleComponentGridDefns, DrawableComponent};
+use crate::application::grid::component::{SimpleComponentGridData, DrawableComponent};
 use crate::application::grid::rect::{grid_rect, GridRect};
 use crate::application::simulation::cpu_registers::{CpuRegister, CpuRegisterBank, CpuRegisterPortName, CpuRegisterPortsData, REGISTER_COUNT};
 
@@ -25,9 +26,7 @@ pub struct CpuRegisterDrawingDefn {
 }
 impl Default for CpuRegisterDrawingDefn {
     fn default() -> Self {
-
-        Self{size: size(50, 30),}
-
+        Self{size: size(60, 30),}
     }
 }
 pub type CpuRegisterBankDrawingDefns = ComponentBankDrawingDefn<CpuRegisterDrawingDefn>;
@@ -40,7 +39,7 @@ impl DrawableComponent for CpuRegister{
     type PortDataContainer = CpuRegisterPortsData;
     type PortGridDataContainer = CpuRegisterPortsGridData;
     type ComponentCalculatedDefns =
-        SimpleComponentGridDefns<
+        SimpleComponentGridData<
             CpuRegisterPortName,
             CpuRegisterPortsData,
             CpuRegisterPortsGridData
@@ -51,21 +50,25 @@ impl DrawableComponent for CpuRegister{
         reg_grid_info: GridPos,
         reg_drawing_info: &Self::DrawingDefn,
         port_drawing_info: &PortDrawingDefns,
-        grid_to_screen_info: &GridToScreenMapper
-    ) -> SimpleComponentGridDefns<Self::PortName, Self::PortDataContainer, Self::PortGridDataContainer>
+        grid_screen_transform: &GridScreenTransformer
+    ) -> SimpleComponentGridData<Self::PortName, Self::PortDataContainer, Self::PortGridDataContainer>
     {
         let reg_grid_rect = {
             let reg_grid_pos = reg_grid_info;
-            let reg_grid_size = grid_to_screen_info.screen_to_grid_size(reg_drawing_info.size);
+            let reg_grid_size = grid_screen_transform.screen_to_grid_size(reg_drawing_info.size);
             grid_rect(reg_grid_pos, reg_grid_size)
         };
 
         let reg_ports_grid_info  = {
+            let port_width = port_drawing_info.base as ScreenUnit ;
+
+            let port_grid_separation = grid_screen_transform.screen_to_grid_size(size(port_width, 0)).x + 1;
+            
             let y       = reg_grid_rect.top_left.y - 1;
             let x_right = reg_grid_rect.top_left.x + reg_grid_rect.size.x - 1;
             CpuRegisterPortsGridData {
                 input : PortGridDefns {
-                    position    : grid_pos(x_right - 4, y),
+                    position    : grid_pos(x_right - port_grid_separation, y),
                     direction   : Direction::Up,
                 },
                 output: PortGridDefns {
@@ -75,9 +78,9 @@ impl DrawableComponent for CpuRegister{
             }
         };
 
-        let blocked_points = BlockedPoints::new_from_blocked_inner_rect(reg_grid_rect.clone());
+        let blocked_points = BlockedPoints::new_from_blocked_rect(reg_grid_rect.clone());
 
-        SimpleComponentGridDefns {
+        SimpleComponentGridData {
             grid_rect: reg_grid_rect,
             blocked_points,
             ports_data: self.ports_info().clone(),
@@ -89,12 +92,13 @@ impl DrawableComponent for CpuRegister{
     fn draw(
         &self,
         _           : &Self::DrawingState,
-        grid_data   : &SimpleComponentGridDefns<Self::PortName, Self::PortDataContainer, Self::PortGridDataContainer>,
+        grid_data   : &SimpleComponentGridData<Self::PortName, Self::PortDataContainer, Self::PortGridDataContainer>,
         drawing_data        : &Self::DrawingDefn,
         port_drawing_info   : &PortDrawingDefns,
-        grid_to_screen_info : &GridToScreenMapper
+        grid_to_screen_info : &GridScreenTransformer
     ) {
-        let SimpleComponentGridDefns {
+
+        let SimpleComponentGridData {
             grid_rect: reg_grid_rect,
             blocked_points,
             ports_grid_data:reg_ports_grid_info,
@@ -126,7 +130,7 @@ impl DrawableComponent for CpuRegister{
         }
 
         { // draw inner square
-            let mut cursor = cursor.after_going( dist(2, full_port_height));
+            let mut cursor = cursor.after_advancing( dist(2, full_port_height));
 
             // draw base rectangle
             draw_rectangle(
@@ -162,7 +166,7 @@ impl DrawableComponent for CpuRegister{
 
             { // DRAW VALUE
 
-                let cursor = cursor.after_going(cursor.remaining_size().with_x(0)/2);
+                let cursor = cursor.after_advancing(cursor.remaining_size().with_x(0)/2);
 
                 draw_text_line_normal(
                     &format!("{:X}", self.value),
@@ -175,12 +179,12 @@ impl DrawableComponent for CpuRegister{
 
     }
 }
-pub type CpuRegisterGridDefns =
-    SimpleComponentGridDefns<
+pub type CpuRegisterGridData =
+    SimpleComponentGridData<
         CpuRegisterPortName,
         CpuRegisterPortsData,
         CpuRegisterPortsGridData
     >;
 
-pub type CpuRegisterBankGridDefns = <CpuRegisterBank as
+pub type CpuRegisterBankGridData = <CpuRegisterBank as
 DrawableComponent>::ComponentCalculatedDefns;

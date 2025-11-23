@@ -2,6 +2,7 @@ use std::ops::Not;
 use macroquad::color::DARKGRAY;
 use macroquad::math::Rect;
 use macroquad::prelude::draw_rectangle;
+use macroquad::shapes::draw_line;
 use crate::application::direction::Direction::{Down, Right};
 use crate::application::draw::shapes::draw_line_pos;
 use crate::application::grid::blocked_point::BlockedPoints;
@@ -12,12 +13,12 @@ use crate::application::grid::pos::{grid_pos, grid_size, GridFPos, GridPos, Grid
 use crate::application::draw::pos::{fpos, pos, size, Pos, ScreenUnit, Size, ToFPosExt};
 
 
-pub struct GridToScreenMapper {
+pub struct GridScreenTransformer {
     pub top_left    : Pos,
     pub spacing     : Pos,
 }
 
-impl GridToScreenMapper {
+impl GridScreenTransformer {
     pub fn new(grid_size: &GridLimits, rect: Rect) -> Self{
         let (top_left, spacing)  = Self::calculate_inner_data(grid_size, &rect);
         Self{
@@ -77,28 +78,30 @@ impl GridToScreenMapper {
 }
 
 pub fn draw_path_grid(
-    grid_transform  : &GridToScreenMapper,
+    grid_transform  : &GridScreenTransformer,
     grid_size       : &GridLimits,
     blocked_points  : &BlockedPoints,
 ) {
     let draw_grid_point = |pos: &Pos|{
         let pos = pos.as_fpos();
+
         draw_rectangle(
             pos.x - 0.5,
             pos.y - 0.5,
             1.0,
             1.0,
-            DARKGRAY.with_alpha(0.8)
+            DARKGRAY.with_alpha(0.5)
         );
     };
-    let draw_grid_line = |p0: &Pos, p1: &Pos|{
-        draw_line_pos(
-            *p0,
-            *p1,
-            1,
-            DARKGRAY.with_alpha(0.1)
-        )
-    };
+
+    // let draw_grid_line = |p0: &Pos, p1: &Pos|{
+    //     draw_line_pos(
+    //         *p0,
+    //         *p1,
+    //         1,
+    //         DARKGRAY.with_alpha(0.1)
+    //     )
+    // };
 
     for y in 0..grid_size.0.y as i16{
         for x in 0..grid_size.0.x as i16{
@@ -113,14 +116,14 @@ pub fn draw_path_grid(
 
             if blocked_points.point_is_available(&bottom_point) && grid_size.contains_point(&bottom_point){
                 let other_grid_point_pos = grid_transform.grid_to_screen_pos(bottom_point);
-                draw_grid_line(&grid_point_pos, &other_grid_point_pos);
+                // draw_grid_line(&grid_point_pos, &other_grid_point_pos);
             }
 
             let GridMovement { destination_point: right_point,.. } = grid_point + Right;
 
             if blocked_points.point_is_available(&right_point) && grid_size.contains_point(&right_point){
                 let other_grid_point_pos = grid_transform.grid_to_screen_pos(right_point);
-                draw_grid_line(&grid_point_pos, &other_grid_point_pos);
+                // draw_grid_line(&grid_point_pos, &other_grid_point_pos);
             }
         }
     }

@@ -7,8 +7,8 @@ use macroquad::shapes::draw_rectangle;
 use wgpu::naga::FastHashMap;
 use crate::application::direction::{self, Direction, Axis};
 use crate::application::draw::cursor::RectCursor;
-use crate::application::grid::component::{ComponentGridData, DrawableComponent, PortDataContainer, PortName, SimpleComponentGridDefns};
-use crate::application::draw::grid_to_screen::GridToScreenMapper;
+use crate::application::grid::component::{ComponentCalculatedDefns, DrawableComponent, PortDataContainer, PortName, SimpleComponentGridData};
+use crate::application::draw::grid_to_screen::GridScreenTransformer;
 use crate::application::draw::port::{PortDefns, PortDrawingDefns, PortGridDefns, PortSignalDirection, SignalType, draw_port};
 use crate::application::draw::pos::Size;
 use crate::application::grid::blocked_point::BlockedPoints;
@@ -44,7 +44,7 @@ impl DrawableComponent for Controller{
 	type PortGridDataContainer = ControllerPortsGridData
 		;
 
-	type ComponentCalculatedDefns  = SimpleComponentGridDefns<
+	type ComponentCalculatedDefns  = SimpleComponentGridData<
 		ControllerPortName,
 		ControllerPortsData,
 		ControllerPortsGridData
@@ -55,7 +55,7 @@ impl DrawableComponent for Controller{
 		top_left         : GridPos,
 		drawing_info     : &Self::DrawingDefn,
 		port_drawing_info: &PortDrawingDefns,
-		grid_to_screen   : &GridToScreenMapper,
+		grid_to_screen   : &GridScreenTransformer,
 	) -> Self::ComponentCalculatedDefns {
         let grid_rect = {
             let reg_grid_size = grid_to_screen.screen_to_grid_size(drawing_info.size);
@@ -154,9 +154,9 @@ impl DrawableComponent for Controller{
        	};
 
         let blocked_points = 
-			BlockedPoints::new_from_blocked_inner_rect(grid_rect.clone());
+			BlockedPoints::new_from_blocked_rect(grid_rect.clone());
 
-        SimpleComponentGridDefns {
+        SimpleComponentGridData {
             grid_rect,
             blocked_points,
             ports_data,
@@ -171,9 +171,9 @@ impl DrawableComponent for Controller{
 		grid_defns       : &Self::ComponentCalculatedDefns,
 		drawing_defns    : &Self::DrawingDefn,
 		port_drawing_info: &PortDrawingDefns,
-		grid_to_screen   : &GridToScreenMapper,
+		grid_to_screen   : &GridScreenTransformer,
 	) {
-		let SimpleComponentGridDefns{
+		let SimpleComponentGridData{
 			grid_rect,
 			ports_data,
 			ports_grid_data,
@@ -191,7 +191,7 @@ impl DrawableComponent for Controller{
 		cursor.pad(1, 1).draw_rect(WHITE);
 
 		cursor.split(24, direction::Axis::Horizontal)
-		 	.with_padding(2, 2)
+		 	.after_padding(2, 2)
 			.draw_text_line("CONTROLLER", super::text::TextStyle::Normal, 1, BLACK);
 		
         { // draw ports

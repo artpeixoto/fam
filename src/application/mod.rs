@@ -8,7 +8,6 @@ use crate::word::Word;
 
 pub mod grid;
 pub mod draw;
-pub mod prelude;
 pub mod direction;
 pub mod simulation;
 pub mod connection;

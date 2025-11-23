@@ -282,8 +282,6 @@ impl CpuRegisterActReader{
     }
 }
 
-
-
 pub struct CpuRegisterActWriter {
     inner       : CpuRegisterDataWriter,
 }

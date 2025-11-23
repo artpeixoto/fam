@@ -5,15 +5,16 @@ use crate::application::grid::rect::{grid_rect, GridRect};
 
 #[derive(Debug, Clone, Eq, PartialEq, Default)]
 pub struct BlockedPoints (pub FastHashSet<GridPos>);
+
 impl BlockedPoints{
     pub fn new() -> Self{
         BlockedPoints(FastHashSet::default())
     }
-    pub fn new_from_blocked_inner_rect(rect: GridRect) -> Self{
+    pub fn new_from_blocked_rect(rect: GridRect) -> Self{
         let mut res = BlockedPoints::new();
         res.block_rect(grid_rect(
-                rect.top_left + grid_dist(1,1),
-                rect.size - grid_size(2,2)
+            rect.top_left  ,
+            rect.size + grid_pos(1,1),
         ));
         res
     }

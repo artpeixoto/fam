@@ -5,7 +5,7 @@ use crate::application::direction::Direction;
 use crate::application::draw::port::{PortDefns, PortGridDefns, PortSignalDirection};
 use crate::application::grid::talu::TaluPortName::{DataIn0, DataIn1};
 use crate::application::grid::blocked_point::BlockedPoints;
-use crate::application::grid::component::{PortDataContainer, SimpleComponentGridDefns};
+use crate::application::grid::component::{PortDataContainer, SimpleComponentGridData};
 use crate::application::grid::pos::{grid_pos, GridPos, GridDist};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -22,7 +22,7 @@ pub struct TaluPortsGridDefns {
 }
 
 pub type TaluGridDefns =
-    SimpleComponentGridDefns<
+    SimpleComponentGridData<
         TaluPortName,
         TaluPortsDefns,
         TaluPortsGridDefns

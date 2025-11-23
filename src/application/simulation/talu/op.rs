@@ -5,7 +5,7 @@ pub enum MovInput {
     Source(CpuRegisterAddress),
     // SourceAddr(CpuRegisterAddress),
 }
-#[derive(Clone, PartialEq, Eq, Debug, Copy)]
+#[derive(Clone, PartialEq, Eq, Debug, Copy,serde::Deserialize, serde::Serialize )]
 pub enum CmpOp{
     LessThan,
     LessThanOrEq,
@@ -15,7 +15,8 @@ pub enum CmpOp{
     NotEq
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Copy)]
+#[derive(Clone, PartialEq, Eq, Debug, Copy, serde::Deserialize, serde::Serialize)]
+
 pub enum TaluOperation {
     NoOp,
     Cmp {

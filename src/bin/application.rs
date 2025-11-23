@@ -3,7 +3,7 @@ use fam::application::draw::controller::ControllerDrawingDefns;
 use fam::application::draw::cpu::CpuDrawingData;
 use fam::application::draw::cpu_register::CpuRegisterBankDrawingDefns;
 use fam::application::draw::cursor::RectCursor;
-use fam::application::draw::grid_to_screen::{GridToScreenMapper, draw_path_grid};
+use fam::application::draw::grid_to_screen::{GridScreenTransformer, draw_path_grid};
 use fam::application::draw::instruction_memory;
 use fam::application::draw::instruction_memory::{
     InstructionMemoryCurrentPosition, InstructionMemoryDrawingDefns,
@@ -16,7 +16,7 @@ use fam::application::draw::pos::{Size, dist, pos, size};
 use fam::application::draw::shapes::draw_rectangle_pos;
 use fam::application::draw::talu::{TaluBankDrawingDefns, TaluDrawingDefns};
 use fam::application::grid::blocked_point::BlockedPoints;
-use fam::application::grid::component::{ComponentGridData, DrawableComponent};
+use fam::application::grid::component::{ComponentCalculatedDefns, DrawableComponent};
 use fam::application::grid::controller::ControllerGridDefns;
 use fam::application::grid::cpu::CpuGridData;
 use fam::application::grid::grid_limits::GridLimits;
@@ -34,20 +34,48 @@ use macroquad::input::get_keys_pressed;
 use macroquad::miniquad::window::set_window_size;
 use macroquad::prelude::*;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Read, Write, stdin, stdout};
+use std::sync::{Arc, OnceLock};
 use wgpu::naga::FastHashMap;
 
 fn main() {
-    macroquad::Window::new("FAM Simulator", amain());
+    let input = read_input();
+    let output = Arc::new(OnceLock::new());
+    let set_output = {
+        let output = output.clone();
+        move |main_memory| {
+            output.set(main_memory).unwrap()
+        }
+    };
+
+    macroquad::Window::new("FAM Simulator", amain(input, set_output));
+    
+    write_output(output.get().unwrap())
+}
+pub fn write_output(res: &FamOutput){
+    stdout().write_all(serde_json::to_string_pretty(&res).unwrap().as_bytes()).unwrap();
 }
 
-async fn amain() {
-    let (program, data) = make_loop_program();
+pub type FamOutput = Vec<Word>;
+
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+pub struct FamInput{
+    pub program: Vec<Instruction>,
+    pub main_memory: Vec<Word>,
+}
+
+fn read_input() -> FamInput {
+    serde_json::from_reader(stdin()).expect("invalid input")
+}
+async fn amain<'a>(input: FamInput, send_output: impl FnOnce(Vec<Word>) + 'a) {
+    let ( program, data ) = ( input.program, input.main_memory );
 
     let screen_size = size(1600, 900);
 
     let grid_limits = GridLimits::new(u16vec2(screen_size.x as u16 / 5, screen_size.y as u16 / 5));
 
-    let grid_to_screen_mapper = GridToScreenMapper::new(
+    let grid_to_screen_mapper = GridScreenTransformer::new(
         &grid_limits,
         Rect::new(0_f32, 0_f32, screen_size.x as f32, screen_size.y as f32),
     );
@@ -62,18 +90,23 @@ async fn amain() {
         grid_limits,
     };
 
-    loop {
+    set_window_size(screen_size.x as u32, screen_size.y as u32);
+
+    'MAIN_LOOP: loop {
         set_window_size(screen_size.x as u32, screen_size.y as u32);
         if get_keys_pressed().contains(&KeyCode::Space) {
-            app.step();
+            let running = app.step();
+            if !running { break 'MAIN_LOOP; }
         }
         clear_background(WHITE);
         app.draw();
-
         next_frame().await;
     }
+    let res = app.cpu.sim.main_memory.0.read().unwrap().clone();
+    send_output(res);        
 }
-pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
+
+pub fn make_loop_program() -> FamInput{
     let source_addr = 0;
     let target_addr = 5;
 
@@ -83,7 +116,6 @@ pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
     let ix_reg = 5;
     let ix_lt_loop_reg = 6;
 
-    let start_increment_reg = 7;
     let start_inner_reg = 8;
     let source_addr_reg = 9;
     let target_addr_reg = 10;
@@ -96,27 +128,27 @@ pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
     let program = Vec::from_iter([
         Instruction::SetLiteral {
             literal: 0,
-            register: 0,
+            reg_addr: 0,
         },
         Instruction::SetLiteral {
             literal: 1,
-            register: 1,
+            reg_addr: 1,
         },
         Instruction::SetLiteral {
             literal: 5,
-            register: 2,
+            reg_addr: 2,
         }, // loop_count
         Instruction::SetLiteral {
             literal: 0,
-            register: 3,
+            reg_addr: 3,
         }, // start
         Instruction::SetLiteral {
             literal: 0,
-            register: 4,
+            reg_addr: 4,
         }, // finished
         Instruction::SetLiteral {
             literal: 0,
-            register: 5,
+            reg_addr: 5,
         }, // i
         Instruction::SetTaluConfig {
             talu_addr: 0,
@@ -153,11 +185,11 @@ pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
         },
         Instruction::SetLiteral {
             literal: source_addr,
-            register: source_addr_reg,
+            reg_addr: source_addr_reg,
         },
         Instruction::SetLiteral {
             literal: target_addr,
-            register: target_addr_reg,
+            reg_addr: target_addr_reg,
         },
         Instruction::SetTaluConfig {
             talu_addr: 3,
@@ -234,18 +266,18 @@ pub fn make_loop_program() -> (Vec<Instruction>, Vec<Word>) {
         },
         Instruction::SetLiteral {
             literal: 1,
-            register: start_reg,
+            reg_addr: start_reg,
         },
         Instruction::SetLiteral {
             literal: 0,
-            register: start_reg,
+            reg_addr: start_reg,
         },
         Instruction::WaitForActivationSignal { register_index: finished_reg }, // 128
     ]);
 
     let data = vec![1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0];
 
-    (program, data)
+    FamInput { program, main_memory: data}
 }
 pub struct FullCpu {
     pub sim: Cpu,
@@ -257,7 +289,7 @@ pub struct Application {
     pub step: u32,
     pub cpu: FullCpu,
     pub screen_size: Size,
-    pub grid_to_screen_mapper: GridToScreenMapper,
+    pub grid_to_screen_mapper: GridScreenTransformer,
     pub grid_limits: GridLimits,
 }
 
@@ -274,8 +306,7 @@ impl Application {
     }
 
     pub fn step(&mut self) -> bool {
-        println!("stepping");
-        let should_continue = self.cpu.sim.execute();
+        let should_continue = self.cpu.sim.step();
         if let Some(instruction_addr) = self
             .cpu
             .sim
@@ -291,9 +322,6 @@ impl Application {
             &self.cpu.sim.netlists,
             &self.grid_limits,
         );
-        if let Ok(val) = self.cpu.sim.main_memory.0.read(){
-            println!("Main memory is: {:?}", val.as_slice())
-        }
         return should_continue;
     }
 }
@@ -303,6 +331,7 @@ fn draw_fps() {
     draw_rectangle_pos(pos(0, 0), dist(200, 30), BLACK);
     macroquad::prelude::draw_fps();
 }
+
 pub static PATH_COLORS: &'static [Color] = &[
     BLUE, RED, GREEN, BROWN, PURPLE, GOLD, MAGENTA, BEIGE, PINK, DARKGREEN, LIME, MAROON, ORANGE,
     DARKBROWN,
@@ -313,7 +342,7 @@ fn draw_paths(
     paths: &Paths,
     netlists: &Netlists,
     // grid_limits: &GridLimits,
-    grid_to_screen_mapper: &GridToScreenMapper,
+    grid_to_screen_mapper: &GridScreenTransformer,
 ) {
     //
     // draw_path_grid(
@@ -335,13 +364,13 @@ fn draw_paths(
 fn draw_full_cpu(
     cpu: &FullCpu,
     grid_limits: &GridLimits,
-    grid_to_screen_mapper: &GridToScreenMapper,
+    grid_to_screen_mapper: &GridScreenTransformer,
 ) {
-    // draw_path_grid(
-    //     &grid_to_screen_mapper,
-    //     &grid_limits,
-    //     &BlockedPoints::new()
-    // );
+    draw_path_grid(
+        &grid_to_screen_mapper,
+        &grid_limits,
+        &cpu.grid.blocked_points
+    );
 
     cpu.sim.instruction_memory.draw(
         &cpu.drawing.instruction_memory.current_pos,
@@ -384,7 +413,7 @@ fn build_full_cpu(
     program: Vec<Instruction>,
     data: Vec<Word>,
     screen_size: Size,
-    grid_to_screen_mapper: &GridToScreenMapper,
+    grid_to_screen_mapper: &GridScreenTransformer,
 ) -> FullCpu {
     let mut main_memory = MainMemory::new(data);
 
@@ -430,11 +459,12 @@ fn build_full_cpu(
     };
 
     let mut cursor = RectCursor::new(pos(0, 0), screen_size);
-    cursor.pad(4, 4);
+    cursor.pad(20, 20);
 
-    let memory_cursor = cursor
+    let memory_cursor = 
+        cursor
         .split(cursor.remaining_size().x / 5, Horizontal)
-        .with_padding(20, 0);
+        .after_changing_size(size(-10, 0));
 
     let instruction_mem_drawing_defns = InstructionMemoryDrawingDefns {
         current_pos: 0,
@@ -450,7 +480,7 @@ fn build_full_cpu(
 
     let mut top_half_cursor = cursor.split(cursor.remaining_size().y / 2, Vertical);
 
-    let controller_cursor = top_half_cursor.split(140, Horizontal).with_padding(20, 20);
+    let controller_cursor = top_half_cursor.split(140, Horizontal).after_padding(20, 20);
 
     let controller_drawing_data = ControllerDrawingDefns {
         size: size(controller_cursor.remaining_size().x, 100),
@@ -463,7 +493,7 @@ fn build_full_cpu(
         grid_to_screen_mapper,
     );
 
-    let talu_bank_cursor = top_half_cursor.with_padding(40, 0);
+    let talu_bank_cursor = top_half_cursor.after_padding(40, 0);
 
     let talu_bank_drawing_data = TaluBankDrawingDefns {
         name: "TALUs".to_string(),
@@ -479,7 +509,7 @@ fn build_full_cpu(
         &grid_to_screen_mapper,
     );
 
-    let bottom_half_cursor = cursor.with_padding(40, 40);
+    let bottom_half_cursor = cursor.after_padding(40, 0);
 
     let register_bank_drawing_data = CpuRegisterBankDrawingDefns {
         name: "Registers".to_string(),

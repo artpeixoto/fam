@@ -1,0 +1,224 @@
+{
+  "program": [
+    {
+      "SetLiteral": {
+        "literal": 0,
+        "reg_addr": 0
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 1,
+        "reg_addr": 1
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 5,
+        "reg_addr": 2
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 0,
+        "reg_addr": 3
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 0,
+        "reg_addr": 4
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 0,
+        "reg_addr": 5
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 0,
+        "talu_config": {
+          "Cmp": {
+            "op": "LessThan",
+            "activation_input": 1,
+            "activation_output": null,
+            "data_input_0": 5,
+            "data_input_1": 2,
+            "data_output": 6
+          }
+        }
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 1,
+        "talu_config": {
+          "And": {
+            "activation_input": 1,
+            "data_input_0": 3,
+            "data_input_1": 6,
+            "data_output_0": 8,
+            "activation_output": null
+          }
+        }
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 2,
+        "talu_config": {
+          "Add": {
+            "activation_input": 8,
+            "data_input_1": 1,
+            "data_input_0": 5,
+            "result_output": 5,
+            "flags_output": null,
+            "activation_output": null
+          }
+        }
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 0,
+        "reg_addr": 9
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 5,
+        "reg_addr": 10
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 3,
+        "talu_config": {
+          "ReadFromMem": {
+            "activation_input": 8,
+            "address_input": 9,
+            "data_output": 11,
+            "activation_output": 12
+          }
+        }
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 4,
+        "talu_config": {
+          "WriteToMem": {
+            "data_input": 11,
+            "address_input": 10,
+            "activation_input": 12,
+            "activation_output": 13
+          }
+        }
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 5,
+        "talu_config": {
+          "Add": {
+            "activation_input": 13,
+            "data_input_1": 1,
+            "data_input_0": 9,
+            "result_output": 9,
+            "flags_output": null,
+            "activation_output": null
+          }
+        }
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 6,
+        "talu_config": {
+          "Add": {
+            "activation_input": 13,
+            "data_input_1": 1,
+            "data_input_0": 10,
+            "result_output": 10,
+            "flags_output": null,
+            "activation_output": null
+          }
+        }
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 7,
+        "talu_config": {
+          "Mov": {
+            "activation_input": 1,
+            "value_input": 13,
+            "data_output": 3,
+            "activation_output": null
+          }
+        }
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 8,
+        "talu_config": {
+          "Cmp": {
+            "op": "Eq",
+            "activation_input": 1,
+            "activation_output": null,
+            "data_input_0": 5,
+            "data_input_1": 2,
+            "data_output": 14
+          }
+        }
+      }
+    },
+    {
+      "SetTaluConfig": {
+        "talu_addr": 9,
+        "talu_config": {
+          "And": {
+            "activation_input": 1,
+            "data_input_0": 14,
+            "data_input_1": 3,
+            "data_output_0": 30,
+            "activation_output": null
+          }
+        }
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 1,
+        "reg_addr": 3
+      }
+    },
+    {
+      "SetLiteral": {
+        "literal": 0,
+        "reg_addr": 3
+      }
+    },
+    {
+      "WaitForActivationSignal": {
+        "register_index": 30
+      }
+    }
+  ],
+  "main_memory": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}

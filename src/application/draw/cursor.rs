@@ -3,7 +3,7 @@ use macroquad::color::Color;
 use macroquad::math::IVec2;
 use macroquad::shapes::draw_rectangle;
 use crate::application::direction::{Direction, Axis};
-use crate::application::draw::grid_to_screen::GridToScreenMapper;
+use crate::application::draw::grid_to_screen::GridScreenTransformer;
 use crate::application::draw::port::PortDrawingDefns;
 use crate::application::draw::shapes::{draw_line_pos, draw_rectangle_lines_pos};
 use crate::application::draw::text::{TextStyle, draw_text_pos};
@@ -123,10 +123,10 @@ impl RectCursor{
         let port_len = port_drawing_info.full_len();
         match port_dir {
             Direction::Up       => {
-                self.go(dist(0, port_len));
+                self.advance(dist(0, port_len));
             }
             Direction::Left     => {
-                self.go(dist(port_len, 0));
+                self.advance(dist(port_len, 0));
             }
             Direction::Down     => {
                 self.change_size(dist(0, -port_len));
@@ -140,7 +140,7 @@ impl RectCursor{
     }
 
     pub fn pad(&mut self, horizontal: i32, vertical: i32) -> &mut Self{
-        self.go(dist(horizontal, vertical));
+        self.advance(dist(horizontal, vertical));
         self.change_size(-dist(horizontal, vertical));
         self
     }
@@ -198,7 +198,7 @@ impl RectCursor{
     #[must_use]
     pub fn split(&mut self, split_dist: ScreenUnit, dir: Axis) -> Self{
         let mut new = self.clone();
-        self.go(match dir {
+        self.advance(match dir {
             Vertical   => pos( 0, split_dist),
             Horizontal => pos( split_dist, 0),
         });
@@ -213,7 +213,7 @@ impl RectCursor{
         }
         new
     }
-    pub fn with_padding(&mut self, horizontal: i32, vertical: i32) -> Self{
+    pub fn after_padding(&mut self, horizontal: i32, vertical: i32) -> Self{
         self.clone_apply_return(|this| this.pad(horizontal, vertical))
     }
     pub fn draw_text_line(&self, text: &str, text_style: TextStyle, scaling: u8, color: Color){
@@ -230,21 +230,21 @@ impl RectCursor{
     }
 
     #[inline(always)]
-    pub fn with_size_changed(&self, size_change: Dist) -> Self{
+    pub fn after_changing_size(&self, size_change: Dist) -> Self{
         self.clone_apply_return(|this| {
             this.change_size(size_change)
         })
     }
 
-    pub fn go(&mut self, movement: Dist) -> &mut Self{
+    pub fn advance(&mut self, movement: Dist) -> &mut Self{
         self.pos +=  movement;
         self.size -=  movement;
         self
     }
 
     #[inline(always)]
-    pub fn after_going(&self, movement: Dist) -> Self{
-        self.clone_apply_return(|this| this.go(movement))
+    pub fn after_advancing(&self, movement: Dist) -> Self{
+        self.clone_apply_return(|this| this.advance(movement))
     }
     #[inline(always)]
     fn clone_apply_return(&self, mut fun: impl FnMut(&mut Self) -> &mut Self) -> Self{
@@ -254,7 +254,7 @@ impl RectCursor{
     }
 }
 
-impl GridToScreenMapper {
+impl GridScreenTransformer {
     pub fn  get_cursor_for_region(&self, top_left: GridPos, size:GridSize ) -> RectCursor{
         let screen_top_left = self.grid_to_screen_pos(top_left);
         let screen_bottom_right = self.grid_to_screen_pos((top_left + size));

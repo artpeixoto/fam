@@ -51,22 +51,23 @@ impl Netlists{
     }
 }
 
-#[derive(Getters)]
+// #[derive(Getters)]
 pub struct Cpu {
+    // components
     pub talu_bank           : TaluBank,
     pub register_bank       : CpuRegisterBank,
     pub controller          : Controller,
     pub instruction_memory  : InstructionMemory,
     pub main_memory         : MainMemory,
+
+    pub connections         : FastHashSet<CpuConnection>,
+    pub netlists            : Netlists,
     pub is_done             : bool,
-    // #[getset(get="pub")]
-    pub connections             : FastHashSet<CpuConnection>,
-    pub netlists                : Netlists
 }
 
 impl Cpu {
     #[must_use]
-    pub fn execute(&mut self) -> bool {
+    pub fn step(&mut self) -> bool {
         if self.is_done { return false; }
 
         self.connections.clear();

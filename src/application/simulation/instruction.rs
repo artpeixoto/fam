@@ -1,21 +1,22 @@
 use crate::application::simulation::cpu_registers::CpuRegisterAddress;
-use crate::application::simulation::talu::TaluOperation;
+use crate::application::simulation::talu::{TaluAddress, TaluOperation};
 use crate::word::Word;
 
 pub const CONTROLLER_INSTRUCTION_SIZE   		: usize = 64;
 
 
-#[derive( PartialEq, Copy, Clone, Debug,Eq, Default)]
+#[derive( PartialEq, Copy, Clone, Debug,Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum Instruction {
     
     SetTaluConfig{
-        talu_addr	: usize,
+        talu_addr	: TaluAddress,
         talu_config	: TaluOperation, 
     },
+    ResetAllTalus,
     
     SetLiteral{
-        literal			: Word,
-        register: CpuRegisterAddress,
+        literal	: Word,
+        reg_addr: CpuRegisterAddress,
     },
 
     // PopStack{
@@ -34,9 +35,6 @@ pub enum Instruction {
         // relative        : bool,
         addr            : Word
     },
-    
-    ResetAll,
-
     #[default]
     NoOp,
 }

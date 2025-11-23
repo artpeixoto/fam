@@ -4,8 +4,8 @@ use wgpu::naga::FastHashMap;
 use crate::application::direction::Axis;
 use crate::application::draw::cursor::RectCursor;
 use crate::application::draw::text::{TextStyle, draw_text_pos};
-use crate::application::grid::component::{DrawableComponent, PortDataContainer, PortName, ComponentGridData};
-use crate::application::draw::grid_to_screen::GridToScreenMapper;
+use crate::application::grid::component::{DrawableComponent, PortDataContainer, PortName, ComponentCalculatedDefns};
+use crate::application::draw::grid_to_screen::GridScreenTransformer;
 use crate::application::draw::port::{PortDefns, PortDrawingDefns, PortGridDefns};
 use crate::application::draw::pos::Size;
 use crate::application::grid::blocked_point::BlockedPoints;
@@ -90,7 +90,7 @@ pub struct ComponentBankGridData<
     pub comp_grid_datas : Box<[InnerComp::ComponentCalculatedDefns; COMP_COUNT]>,
 }
 impl<InnerComp, const COMP_COUNT: usize>
-    ComponentGridData for ComponentBankGridData<InnerComp, COMP_COUNT>
+    ComponentCalculatedDefns for ComponentBankGridData<InnerComp, COMP_COUNT>
 where
     InnerComp: DrawableComponent,
 {
@@ -138,13 +138,13 @@ where
         grid_top_left: GridPos,
         drawing_data: &Self::DrawingDefn,
         port_drawing_data: &PortDrawingDefns,
-        grid_to_screen_mapper: &GridToScreenMapper
+        grid_to_screen_mapper: &GridScreenTransformer
     ) -> Self::ComponentCalculatedDefns {
         let mut cursor = RectCursor::new(grid_to_screen_mapper.grid_to_screen_pos(grid_top_left), drawing_data.size);
 
-        let title_height = TextStyle::W_I_D_E.get_dims().full_height() * 2 + 4;
+        let title_height = TextStyle::Wide.get_dims().full_height() * 2 + 4;
 
-        let title_cursor =  cursor.split(title_height, Axis::Vertical).with_padding(0, 2);
+        let title_cursor =  cursor.split(title_height, Axis::Vertical).after_padding(0, 2);
         let title_pos = grid_to_screen_mapper.screen_to_nearest_grid_pos(title_cursor.top_left());
 
         let grid_top_left = grid_to_screen_mapper.screen_to_nearest_grid_pos(cursor.top_left());
@@ -172,6 +172,7 @@ where
             remaining_grid_size.x / (col_count as i16 + 1),
             remaining_grid_size.y / (drawing_data.row_count as i16 + 1),
         );
+
         let mut port_data = FastHashMap::default();
         let mut port_grid_data = FastHashMap::default();
         let mut blocked_points = BlockedPoints::new();
@@ -243,12 +244,12 @@ where
         calculated_defns        : &Self::ComponentCalculatedDefns,
         drawing_defns           : &Self::DrawingDefn,
         port_drawing_defns      : &PortDrawingDefns,
-        grid_to_screen_mapper   : &GridToScreenMapper
+        grid_to_screen_mapper   : &GridScreenTransformer
     ) {
         draw_text_pos(
             &drawing_defns.name, 
             grid_to_screen_mapper.grid_to_screen_pos(calculated_defns.title_pos), 
-            TextStyle::W_I_D_E,
+            TextStyle::Wide,
             2, 
             BLACK
         );

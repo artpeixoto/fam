@@ -1,7 +1,7 @@
 use std::hash::Hash;
 use std::marker::PhantomData;
 use wgpu::naga::FastHashMap;
-use crate::application::draw::grid_to_screen::GridToScreenMapper;
+use crate::application::draw::grid_to_screen::GridScreenTransformer;
 use crate::application::draw::port::{PortDrawingDefns, PortGridDefns, PortDefns};
 use crate::application::grid::blocked_point::BlockedPoints;
 use crate::application::grid::pos::GridPos;
@@ -16,7 +16,7 @@ pub trait DrawableComponent {
     type PortGridDataContainer
         : PortDataContainer<Self::PortName, PortGridDefns>;
 
-    type ComponentCalculatedDefns:  ComponentGridData<
+    type ComponentCalculatedDefns:  ComponentCalculatedDefns<
         PortName=Self::PortName,
         PortDataContainer=Self::PortDataContainer,
         PortGridDataContainer=Self::PortGridDataContainer,
@@ -26,7 +26,7 @@ pub trait DrawableComponent {
         grid_pos         : GridPos,
         drawing_info     : &Self::DrawingDefn,
         port_drawing_info: &PortDrawingDefns,
-        grid_to_screen   : &GridToScreenMapper,
+        grid_to_screen   : &GridScreenTransformer,
     ) -> Self::ComponentCalculatedDefns;
 
     fn draw(
@@ -35,7 +35,7 @@ pub trait DrawableComponent {
         grid_defns       : &Self::ComponentCalculatedDefns,
         drawing_defns    : &Self::DrawingDefn,
         port_drawing_info: &PortDrawingDefns,
-        grid_to_screen   : &GridToScreenMapper,
+        grid_to_screen   : &GridScreenTransformer,
     );
 }
 
@@ -46,7 +46,7 @@ pub trait PortName: Sized + Hash + Eq + Clone {
     fn small_name(&self) -> &str;
 }
 
-pub trait ComponentGridData
+pub trait ComponentCalculatedDefns
 {
     type PortName: PortName;
     type PortDataContainer: PortDataContainer<Self::PortName, PortDefns>;
@@ -58,8 +58,8 @@ pub trait ComponentGridData
 }
 
 impl<N, P, G>
-    ComponentGridData
-    for SimpleComponentGridDefns<N, P, G>
+    ComponentCalculatedDefns
+    for SimpleComponentGridData<N, P, G>
 where
     N: PortName,
     P: PortDataContainer<N, PortDefns>,
@@ -86,7 +86,7 @@ where
     }
 }
 
-pub struct SimpleComponentGridDefns<N, P, G,>
+pub struct SimpleComponentGridData<N, P, G,>
 where
     N: PortName,
     P: PortDataContainer<N, PortDefns>,

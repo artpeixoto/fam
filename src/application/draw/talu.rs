@@ -2,36 +2,40 @@ use crate::application::simulation::talu::{CmpOp, TALU_COUNT, TaluAddress, TaluS
 use crate::application::direction::Direction;
 use crate::application::direction::Axis::Vertical;
 use crate::application::draw::component_bank::{ComponentBankDrawingDefn, ComponentBankGridData};
-use crate::application::draw::grid_to_screen::GridToScreenMapper;
+use crate::application::draw::grid_to_screen::GridScreenTransformer;
 use crate::application::draw::port::{draw_port, PortDrawingDefns, PortGridDefns};
 use crate::application::draw::pos::{dist, pos, size, ScreenUnit, Size};
 use crate::application::draw::shapes::{draw_circle_pos, draw_rectangle_pos};
 use crate::application::draw::text::{draw_text_line_tiny, draw_title};
 use crate::application::grid::talu::{TaluGridDefns, TaluPortsGridDefns};
 use crate::application::grid::blocked_point::BlockedPoints;
-use crate::application::grid::component::{DrawableComponent, PortDataContainer, PortName, SimpleComponentGridDefns};
+use crate::application::grid::component::{DrawableComponent, PortDataContainer, PortName, SimpleComponentGridData};
 use crate::application::grid::pos::{grid_pos, GridPos};
 use crate::application::grid::rect::grid_rect;
 use crate::application::simulation::talu::{TaluCore, TaluOperation, TaluPortName, TaluPortsDefns};
 use crate::tools::used_in::UsedIn;
 use itertools::Itertools;
-use macroquad::color::{BLACK, GRAY, GREEN, LIGHTGRAY, WHITE, YELLOW};
+use macroquad::color::{BLACK, Color, GRAY, GREEN, LIGHTGRAY, WHITE, YELLOW};
+use wgpu::naga::FastHashMap;
 use std::marker::PhantomData;
 use std::ops::Index;
 
 
-#[derive(Clone, PartialEq, Eq)]
+// #[derive(Clone, PartialEq, Eq)]
 pub struct TaluDrawingDefns {
     pub full_size: Size,
     pub header_height: ScreenUnit,
+    pub state_signal_size: ScreenUnit,
 }
+
 
 
 impl Default for TaluDrawingDefns {
     fn default() -> Self {
         Self {
             full_size: size(60, 60),
-            header_height: 12
+            header_height: 12,
+            state_signal_size: 3,
         }
     }
 }
@@ -43,7 +47,7 @@ impl DrawableComponent for TaluCore {
     type PortDataContainer = TaluPortsDefns;
     type PortGridDataContainer = TaluPortsGridDefns;
     type ComponentCalculatedDefns =
-        SimpleComponentGridDefns<
+        SimpleComponentGridData<
             Self::PortName,
             Self::PortDataContainer,
             Self::PortGridDataContainer
@@ -54,7 +58,7 @@ impl DrawableComponent for TaluCore {
         grid_position    : GridPos,
         drawing_data     : &Self::DrawingDefn,
         port_drawing_data: &PortDrawingDefns,
-        grid_to_screen   : &GridToScreenMapper,
+        grid_to_screen   : &GridScreenTransformer,
     ) -> Self::ComponentCalculatedDefns {
 
         let talu_ports_info = self.get_ports_info();
@@ -143,10 +147,11 @@ impl DrawableComponent for TaluCore {
 
                 talu_ports_grid_info
             };
+        
         let talu_grid_rect = grid_rect(pos, talu_grid_size);
-        let blocked = BlockedPoints::new_from_blocked_inner_rect(talu_grid_rect.clone());
+        let blocked = BlockedPoints::new_from_blocked_rect(talu_grid_rect.clone());
 
-        SimpleComponentGridDefns {
+        SimpleComponentGridData {
             grid_rect: talu_grid_rect,
             blocked_points: blocked,
             ports_data: talu_ports_info,
@@ -158,14 +163,14 @@ impl DrawableComponent for TaluCore {
     fn draw(
         &self,
         drawing_state       : &Self::DrawingState,
-        calculated_defns    : &SimpleComponentGridDefns<
+        calculated_defns    : &SimpleComponentGridData<
             Self::PortName, 
             Self::PortDataContainer, 
             Self::PortGridDataContainer
         >,
         talu_drawing_data    : &Self::DrawingDefn,
         port_drawing_data   : &PortDrawingDefns,
-        grid_to_screen      : &GridToScreenMapper,
+        grid_to_screen      : &GridScreenTransformer,
     ) {
         let mut cursor =
             grid_to_screen
@@ -181,7 +186,7 @@ impl DrawableComponent for TaluCore {
                 Direction::Right,
                 port_drawing_data,
             )
-            .with_padding(0, 2)
+            .after_padding(0, 2)
             ;
 
 
@@ -215,13 +220,15 @@ impl DrawableComponent for TaluCore {
         let talu_op = self.operation;
 
         { // status text
-            cursor.go(dist(2, 2));
-            let radius = 4;
+            cursor.advance(dist(talu_drawing_data.state_signal_size/2 + 1,talu_drawing_data.state_signal_size/2 + 1 ));
+            let radius = talu_drawing_data.state_signal_size;
+
             let circle_color = match self.state{
                 TaluState::JustProcessed => GREEN,
                 TaluState::Closing => YELLOW,
                 TaluState::Done => GRAY,
             };
+
             let center =cursor.top_left() +  Direction::Right * radius + Direction::Down * radius ; 
             draw_circle_pos(
                 &center , 
@@ -232,8 +239,8 @@ impl DrawableComponent for TaluCore {
         { // draw operation text
             let cursor =
                 cursor
-                .after_going(cursor.remaining_size() / 2)
-                .after_going(dist(-15, -5));
+                .after_advancing(cursor.remaining_size() / 2)
+                .after_advancing(dist(-15, -5));
 
             let operation_text = {
                 match talu_op {

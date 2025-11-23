@@ -75,7 +75,7 @@ impl Controller{
 						self.instruction_reader.set_increment_cmd(Increment);
 						self.state = ControllerExecutionState::ReadingInstruction;
 					}
-					Instruction::SetLiteral {  literal , register,} => {
+					Instruction::SetLiteral {  literal , reg_addr: register,} => {
 						self.cpu_registers_writer.set_connection(Some(register));
 						self.cpu_registers_writer.write(literal);
 						self.instruction_reader.set_increment_cmd(Increment);
@@ -90,7 +90,7 @@ impl Controller{
 						self.instruction_reader.set_increment_cmd(GoTo(addr));
 						self.state = ControllerExecutionState::ReadingInstruction;
 					}
-					Instruction::ResetAll => {
+					Instruction::ResetAllTalus => {
 						self.talu_config_writer = TaluConfigWriter::WritingToAll {op:
 						TaluOperation::NoOp};
 						self.instruction_reader.set_increment_cmd(Increment);

@@ -2,7 +2,7 @@ use crate::application::direction::Direction;
 use macroquad::prelude::*;
 use macroquad::color::Color;
 use macroquad::math::Vec2;
-use crate::application::draw::grid_to_screen::GridToScreenMapper;
+use crate::application::draw::grid_to_screen::GridScreenTransformer;
 use crate::application::draw::shapes::draw_line_pos;
 use crate::application::grid::{pos::GridPos};
 use crate::application::draw::pos::{Pos, ToFPosExt};
@@ -59,7 +59,7 @@ pub fn draw_port(
     port              : &PortDefns,
     port_grid_info    : &PortGridDefns,
     port_drawing_info : &PortDrawingDefns,
-    grid_to_screen    : &GridToScreenMapper,
+    grid_to_screen    : &GridScreenTransformer,
 ) {
     
     let color = {
